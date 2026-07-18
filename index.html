@@ -242,6 +242,10 @@
   .table-wrap{overflow-x:auto; margin-top:12px; max-height:560px; overflow-y:auto; border:1px solid var(--paper-dim); border-radius:10px}
   .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px}
   select{padding:12px 14px; border-radius:10px; border:1.5px solid var(--paper-dim); background:#fff; font-family:'Inter',sans-serif}
+  .grid-2 label.hint{display:block; margin-bottom:6px}
+  .grid-2 > div > select, .grid-2 > div > input{width:100%}
+  #rollcall-table select{width:100%; padding:8px 10px}
+  input[type="month"], input[type="number"]{padding:13px 16px; border:1.5px solid var(--paper-dim); border-radius:10px; font-size:16px; background:var(--paper)}
 
   .footer-note{
     text-align:center; color:var(--text-soft); font-size:13px;
@@ -270,8 +274,8 @@
 </header>
 
 <nav class="ribbon-nav" role="tablist" aria-label="Sections">
-  <button class="ribbon-btn" role="tab" aria-selected="true" data-panel="lookup">Find My Status</button>
-  <button class="ribbon-btn" role="tab" aria-selected="false" data-panel="admin">Officers' Dashboard</button>
+  <button class="ribbon-btn main-tab" role="tab" aria-selected="true" data-panel="lookup">Find My Status</button>
+  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="admin">Officers' Dashboard</button>
 </nav>
 
 <main>
@@ -310,7 +314,15 @@
     <div id="admin-content" style="display:none">
       <div class="stat-cards" id="admin-stats"></div>
 
-      <div class="card">
+      <div class="ribbon-nav" style="margin-top:0" role="tablist" aria-label="Officer tools">
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="true" data-sub="roster">Roster</button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="rollcall">Roll Call</button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="dues">Log Dues</button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="addmember">Add Member</button>
+      </div>
+
+      <!-- ROSTER -->
+      <div class="card admin-sub" id="sub-roster">
         <h2 style="margin-top:0">Full Roster</h2>
         <div class="toolbar">
           <input type="text" id="admin-search" placeholder="Search name…" style="max-width:260px">
@@ -323,13 +335,95 @@
             <thead>
               <tr>
                 <th>Name</th><th>Year Raised</th><th>Status</th><th>Good Standing</th>
-                <th>Attendance</th><th>Qualified to Vote</th><th>Arrears</th><th>Remarks</th>
+                <th>Attendance</th><th>Qualified to Vote</th><th>Arrears</th><th>Remarks</th><th></th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
-        <p class="hint">To edit any of this data, open the Google Sheet directly — this dashboard is read-only and updates automatically after you save changes there.</p>
+        <p class="hint">Click "Edit" on any row to update that member's status, arrears, or remarks directly from here.</p>
+      </div>
+
+      <!-- EDIT MEMBER (hidden until triggered) -->
+      <div class="card" id="edit-member-card" style="display:none">
+        <h2 style="margin-top:0">Edit Member</h2>
+        <input type="hidden" id="edit-member-id">
+        <div class="grid-2">
+          <div><label class="hint">Status</label><select id="edit-status"></select></div>
+          <div><label class="hint">Proficiency (Y/N)</label><select id="edit-proficiency"><option value=""></option><option>Y</option><option>N</option></select></div>
+          <div><label class="hint">In Good Standing (Y/N)</label><select id="edit-goodstanding"><option value=""></option><option>Y</option><option>N</option></select></div>
+          <div><label class="hint">Legacy Arrears (₱)</label><input type="text" id="edit-arrears"></div>
+        </div>
+        <label class="hint" style="display:block;margin-top:14px">Remarks</label>
+        <input type="text" id="edit-remarks" style="width:100%">
+        <div class="search-row" style="margin-top:16px">
+          <button class="btn" id="edit-save-btn">Save Changes</button>
+          <button class="btn" id="edit-cancel-btn" style="background:#8a8368">Cancel</button>
+        </div>
+        <div id="edit-msg" class="hint"></div>
+      </div>
+
+      <!-- ROLL CALL -->
+      <div class="card admin-sub" id="sub-rollcall" style="display:none">
+        <h2 style="margin-top:0">Roll Call</h2>
+        <p class="hint" style="margin-top:-6px">Pick the meeting date, set each member's code, then save once. Re-saving the same month updates existing entries instead of duplicating them.</p>
+        <div class="search-row">
+          <input type="month" id="rollcall-month">
+          <button class="btn" id="rollcall-save-btn">Save Roll Call</button>
+        </div>
+        <div id="rollcall-msg" class="hint"></div>
+        <div class="table-wrap" style="margin-top:14px">
+          <table id="rollcall-table">
+            <thead><tr><th>Name</th><th>Status</th><th style="width:140px">Code</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- LOG DUES -->
+      <div class="card admin-sub" id="sub-dues" style="display:none">
+        <h2 style="margin-top:0">Log a Dues Payment</h2>
+        <div class="grid-2">
+          <div>
+            <label class="hint">Member</label>
+            <input type="text" id="dues-member-search" list="dues-member-list" placeholder="Start typing a name…">
+            <datalist id="dues-member-list"></datalist>
+          </div>
+          <div><label class="hint">Year</label><input type="number" id="dues-year" placeholder="2026"></div>
+          <div><label class="hint">Amount (₱)</label><input type="number" id="dues-amount" placeholder="6200"></div>
+          <div>
+            <label class="hint">Status</label>
+            <select id="dues-status">
+              <option>Paid</option><option>Unpaid</option><option>Not Applicable</option>
+              <option>With Notice</option><option>Suspended</option><option>Note</option>
+            </select>
+          </div>
+        </div>
+        <label class="hint" style="display:block;margin-top:14px">Note (OR number, remarks, etc.)</label>
+        <input type="text" id="dues-note" style="width:100%">
+        <div class="search-row" style="margin-top:16px">
+          <button class="btn" id="dues-save-btn">Save Payment</button>
+        </div>
+        <div id="dues-msg" class="hint"></div>
+      </div>
+
+      <!-- ADD MEMBER -->
+      <div class="card admin-sub" id="sub-addmember" style="display:none">
+        <h2 style="margin-top:0">Add a New Member</h2>
+        <div class="grid-2">
+          <div><label class="hint">Surname</label><input type="text" id="new-surname"></div>
+          <div><label class="hint">First Name</label><input type="text" id="new-first"></div>
+          <div><label class="hint">Middle Name</label><input type="text" id="new-middle"></div>
+          <div><label class="hint">Year Raised</label><input type="number" id="new-yearraised" placeholder="2026"></div>
+          <div><label class="hint">Status</label><select id="new-status"></select></div>
+          <div><label class="hint">Proficiency (Y/N)</label><select id="new-proficiency"><option value=""></option><option>Y</option><option>N</option></select></div>
+        </div>
+        <label class="hint" style="display:block;margin-top:14px">Remarks</label>
+        <input type="text" id="new-remarks" style="width:100%">
+        <div class="search-row" style="margin-top:16px">
+          <button class="btn" id="new-member-save-btn">Add Member</button>
+        </div>
+        <div id="new-member-msg" class="hint"></div>
       </div>
     </div>
   </section>
@@ -342,6 +436,7 @@
    CONFIGURATION — paste your deployed Apps Script Web App URL below
    ===================================================================== */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUcMlS1ePkQiRNTwk8kUTilL0CX7P_-CqAuQBRp9hyj9wK69OXNobEnkFeUze5ErFu/exec';
+
 
 /* ---------------------------------------------------------------------
    JSONP helper (avoids CORS issues with Apps Script)
@@ -371,9 +466,9 @@ function jsonp(params) {
 /* ---------------------------------------------------------------------
    NAV
    --------------------------------------------------------------------- */
-document.querySelectorAll('.ribbon-btn').forEach(btn => {
+document.querySelectorAll('.main-tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.ribbon-btn').forEach(b => b.setAttribute('aria-selected', 'false'));
+    document.querySelectorAll('.main-tab').forEach(b => b.setAttribute('aria-selected', 'false'));
     btn.setAttribute('aria-selected', 'true');
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
@@ -502,7 +597,7 @@ function renderAdmin() {
     statusCounts[s] = (statusCounts[s] || 0) + 1;
     totalArrears += Number(m.arrears) || 0;
     if (m.goodStanding === 'Y') goodStanding++;
-    if ((m.qualifiedToVote || '').toLowerCase().indexOf('qualified') !== -1) qualified++;
+    if ((m.qualifiedToVote || '').toUpperCase() === 'Y') qualified++;
   });
   const statsEl = document.getElementById('admin-stats');
   statsEl.innerHTML = '';
@@ -549,12 +644,210 @@ function renderTable() {
         <td>${m.qualifiedToVote || '—'}</td>
         <td>${m.arrears ? '₱' + Number(m.arrears).toLocaleString() : '—'}</td>
         <td>${m.remarks || m.attendanceRemarks || ''}</td>
+        <td><button class="btn" style="padding:6px 12px;font-size:13px" data-edit="${m.memberId}">Edit</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  tbody.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openEditMember(btn.dataset.edit));
+  });
+}
+document.getElementById('admin-search').addEventListener('input', renderTable);
+document.getElementById('admin-status-filter').addEventListener('change', renderTable);
+
+/* ---------------------------------------------------------------------
+   WRITE HELPER — POST to Apps Script as text/plain to avoid CORS preflight
+   --------------------------------------------------------------------- */
+function adminKey() { return sessionStorage.getItem('nmt_admin_key') || ''; }
+
+async function postAction(payload) {
+  payload.key = adminKey();
+  const resp = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  return await resp.json();
+}
+
+const STATUS_OPTIONS = ['Regular', 'Dual', 'LML', 'Suspended', 'Expelled', 'Deceased', 'Needs Review', 'Unspecified'];
+
+async function refreshRoster() {
+  const data = await jsonp({ action: 'roster', key: adminKey() });
+  if (!data.error) { fullRoster = data.roster || []; renderAdmin(); }
+}
+
+/* ---------------------------------------------------------------------
+   ADMIN SUB-TABS
+   --------------------------------------------------------------------- */
+document.querySelectorAll('.admin-subtab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.admin-subtab').forEach(b => b.setAttribute('aria-selected', 'false'));
+    btn.setAttribute('aria-selected', 'true');
+    document.querySelectorAll('.admin-sub').forEach(s => s.style.display = 'none');
+    document.getElementById('edit-member-card').style.display = 'none';
+    document.getElementById('sub-' + btn.dataset.sub).style.display = 'block';
+    if (btn.dataset.sub === 'rollcall') renderRollCallTable();
+    if (btn.dataset.sub === 'dues') renderDuesMemberList();
+  });
+});
+
+/* ---------------------------------------------------------------------
+   EDIT MEMBER
+   --------------------------------------------------------------------- */
+function openEditMember(memberId) {
+  const m = fullRoster.find(x => x.memberId === memberId);
+  if (!m) return;
+  document.querySelectorAll('.admin-sub').forEach(s => s.style.display = 'none');
+  document.getElementById('edit-member-id').value = m.memberId;
+  const statusSel = document.getElementById('edit-status');
+  statusSel.innerHTML = STATUS_OPTIONS.map(s => `<option ${s === m.status ? 'selected' : ''}>${s}</option>`).join('');
+  document.getElementById('edit-proficiency').value = m.proficiency || '';
+  document.getElementById('edit-goodstanding').value = m.goodStanding || '';
+  document.getElementById('edit-arrears').value = m.arrears || 0;
+  document.getElementById('edit-remarks').value = m.remarks || '';
+  document.getElementById('edit-msg').textContent = '';
+  document.getElementById('edit-member-card').style.display = 'block';
+}
+document.getElementById('edit-cancel-btn').addEventListener('click', () => {
+  document.getElementById('edit-member-card').style.display = 'none';
+  document.getElementById('sub-roster').style.display = 'block';
+});
+document.getElementById('edit-save-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('edit-msg');
+  msg.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    const result = await postAction({
+      action: 'updateMember',
+      memberId: document.getElementById('edit-member-id').value,
+      fields: {
+        status: document.getElementById('edit-status').value,
+        proficiency: document.getElementById('edit-proficiency').value,
+        goodStanding: document.getElementById('edit-goodstanding').value,
+        legacyArrears: document.getElementById('edit-arrears').value,
+        remarks: document.getElementById('edit-remarks').value
+      }
+    });
+    if (result.error) { msg.textContent = result.error; return; }
+    msg.textContent = 'Saved.';
+    await refreshRoster();
+    setTimeout(() => {
+      document.getElementById('edit-member-card').style.display = 'none';
+      document.getElementById('sub-roster').style.display = 'block';
+    }, 500);
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+/* ---------------------------------------------------------------------
+   ROLL CALL
+   --------------------------------------------------------------------- */
+const ATTENDANCE_CODES = ['', 'C', 'NO', 'NC', 'NP'];
+function renderRollCallTable() {
+  const now = new Date();
+  const monthInput = document.getElementById('rollcall-month');
+  if (!monthInput.value) monthInput.value = now.toISOString().slice(0, 7);
+  const tbody = document.querySelector('#rollcall-table tbody');
+  tbody.innerHTML = '';
+  fullRoster
+    .filter(m => m.status !== 'Deceased' && m.status !== 'Expelled')
+    .forEach(m => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${m.fullName}</td>
+        <td><span class="badge ${statusBadgeClass(m.status)}">${m.status || '—'}</span></td>
+        <td><select data-member="${m.memberId}">${ATTENDANCE_CODES.map(c => `<option value="${c}">${c || '— Absent —'}</option>`).join('')}</select></td>
       `;
       tbody.appendChild(tr);
     });
 }
-document.getElementById('admin-search').addEventListener('input', renderTable);
-document.getElementById('admin-status-filter').addEventListener('change', renderTable);
+document.getElementById('rollcall-save-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('rollcall-msg');
+  const monthVal = document.getElementById('rollcall-month').value; // "YYYY-MM"
+  if (!monthVal) { msg.textContent = 'Pick a meeting month first.'; return; }
+  const entries = Array.from(document.querySelectorAll('#rollcall-table select'))
+    .map(sel => ({ memberId: sel.dataset.member, code: sel.value }))
+    .filter(e => e.code);
+  if (entries.length === 0) { msg.textContent = 'Set at least one member\'s attendance code before saving.'; return; }
+  msg.innerHTML = `<span class="spinner"></span>Saving ${entries.length} entries…`;
+  try {
+    const result = await postAction({ action: 'rollCall', meetingMonth: monthVal + '-01', entries });
+    if (result.error) { msg.textContent = result.error; return; }
+    msg.textContent = `Saved — ${result.added} added, ${result.updated} updated.`;
+    await refreshRoster();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+/* ---------------------------------------------------------------------
+   LOG DUES
+   --------------------------------------------------------------------- */
+function renderDuesMemberList() {
+  const list = document.getElementById('dues-member-list');
+  list.innerHTML = fullRoster.map(m => `<option value="${m.fullName}" data-id="${m.memberId}">`).join('');
+}
+document.getElementById('dues-save-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('dues-msg');
+  const nameVal = document.getElementById('dues-member-search').value.trim();
+  const match = fullRoster.find(m => m.fullName.toLowerCase() === nameVal.toLowerCase());
+  if (!match) { msg.textContent = 'Pick a member from the suggestions list by exact name.'; return; }
+  const year = document.getElementById('dues-year').value;
+  if (!year) { msg.textContent = 'Enter a year.'; return; }
+  msg.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    const result = await postAction({
+      action: 'addDue',
+      due: {
+        memberId: match.memberId,
+        year: year,
+        amount: document.getElementById('dues-amount').value,
+        status: document.getElementById('dues-status').value,
+        note: document.getElementById('dues-note').value
+      }
+    });
+    if (result.error) { msg.textContent = result.error; return; }
+    msg.textContent = 'Payment logged.';
+    document.getElementById('dues-member-search').value = '';
+    document.getElementById('dues-amount').value = '';
+    document.getElementById('dues-note').value = '';
+    await refreshRoster();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+/* ---------------------------------------------------------------------
+   ADD MEMBER
+   --------------------------------------------------------------------- */
+document.getElementById('new-status').innerHTML = STATUS_OPTIONS.map(s => `<option>${s}</option>`).join('');
+document.getElementById('new-member-save-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('new-member-msg');
+  const surname = document.getElementById('new-surname').value.trim();
+  const first = document.getElementById('new-first').value.trim();
+  if (!surname || !first) { msg.textContent = 'Surname and First Name are required.'; return; }
+  msg.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    const result = await postAction({
+      action: 'addMember',
+      member: {
+        surname, firstName: first,
+        middleName: document.getElementById('new-middle').value.trim(),
+        yearRaised: document.getElementById('new-yearraised').value,
+        status: document.getElementById('new-status').value,
+        proficiency: document.getElementById('new-proficiency').value,
+        remarks: document.getElementById('new-remarks').value
+      }
+    });
+    if (result.error) { msg.textContent = result.error; return; }
+    msg.textContent = `Added as ${result.memberId}.`;
+    ['new-surname', 'new-first', 'new-middle', 'new-yearraised', 'new-remarks'].forEach(id => document.getElementById(id).value = '');
+    await refreshRoster();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
 </script>
 </body>
 </html>
