@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noli Me Tangere Lodge No. 42 — Membership &amp; Attendance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0c0f0a;
+    --ink-soft:#171a12;
+    --paper:#f5efdc;
+    --paper-dim:#ece3c8;
+    --gold:#c6a24c;
+    --gold-bright:#e6c877;
+    --gold-deep:#8a6d2f;
+    --green:#1e4d34;
+    --green-deep:#0f2f1f;
+    --text:#221f14;
+    --text-soft:#5a5240;
+    --ok:#2f6b45;
+    --warn:#a45a1e;
+    --bad:#a3312a;
+    --radius:14px;
+    --shadow:0 10px 30px rgba(0,0,0,.18);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--text);
+    font-family:'EB Garamond', serif;
+    font-size:18px;
+    line-height:1.5;
+  }
+  h1,h2,h3,.display{
+    font-family:'Cinzel', serif;
+    letter-spacing:.04em;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .mono, table, input, button, .badge, .tag{ font-family:'Inter', sans-serif; }
+  a{color:inherit}
+  button{font:inherit}
+  :focus-visible{outline:3px solid var(--gold-bright); outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    background:
+      radial-gradient(ellipse at 50% -10%, #1a2116 0%, var(--ink) 55%),
+      var(--ink);
+    color:var(--paper);
+    padding:64px 20px 56px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::before, .hero::after{
+    content:"";
+    position:absolute; left:50%; top:0;
+    width:1px; height:100%;
+    background:linear-gradient(180deg, transparent, rgba(198,162,76,.25), transparent);
+  }
+  .seal{
+    width:150px; height:150px;
+    margin:0 auto 22px;
+    border-radius:50%;
+    padding:6px;
+    background:
+      conic-gradient(from 0deg, var(--gold), var(--gold-bright), var(--gold-deep), var(--gold), var(--gold-bright), var(--gold-deep), var(--gold));
+    box-shadow:var(--shadow), 0 0 0 1px rgba(198,162,76,.4);
+  }
+  .seal img{
+    width:100%; height:100%; border-radius:50%;
+    object-fit:cover; display:block;
+    background:#000;
+  }
+  .lodge-name{
+    font-size:clamp(28px, 5vw, 44px);
+    margin:0 0 6px;
+    color:var(--gold-bright);
+    text-transform:uppercase;
+  }
+  .lodge-sub{
+    margin:0 0 6px;
+    color:var(--paper-dim);
+    font-family:'Inter',sans-serif;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    font-size:12px;
+  }
+  .lodge-tag{
+    max-width:480px; margin:18px auto 0;
+    color:rgba(245,239,220,.75);
+    font-style:italic;
+    font-size:17px;
+  }
+
+  /* ---------- RIBBON NAV ---------- */
+  .ribbon-nav{
+    display:flex; justify-content:center; gap:14px;
+    flex-wrap:wrap;
+    padding:0 20px;
+    margin-top:-26px;
+    position:relative; z-index:2;
+  }
+  .ribbon-btn{
+    background:var(--green);
+    color:var(--paper);
+    border:1px solid var(--gold-deep);
+    padding:14px 26px;
+    border-radius:8px;
+    font-family:'Cinzel',serif;
+    font-size:14px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    cursor:pointer;
+    box-shadow:var(--shadow);
+    transition:transform .15s ease, background .15s ease;
+  }
+  .ribbon-btn:hover{ transform:translateY(-2px); background:var(--green-deep); }
+  .ribbon-btn[aria-selected="true"]{
+    background:var(--gold);
+    color:var(--ink);
+    border-color:var(--gold-bright);
+  }
+
+  main{max-width:960px; margin:0 auto; padding:40px 20px 80px}
+  .panel{display:none}
+  .panel.active{display:block}
+
+  .card{
+    background:#fff;
+    border:1px solid var(--paper-dim);
+    border-radius:var(--radius);
+    padding:26px;
+    box-shadow:0 2px 10px rgba(0,0,0,.05);
+  }
+  .card + .card{margin-top:18px}
+
+  /* ---------- SEARCH ---------- */
+  .search-row{display:flex; gap:10px; margin-bottom:6px}
+  input[type="text"], input[type="password"]{
+    flex:1;
+    padding:13px 16px;
+    border:1.5px solid var(--paper-dim);
+    border-radius:10px;
+    font-size:16px;
+    background:var(--paper);
+  }
+  input:focus{border-color:var(--gold-deep)}
+  .btn{
+    padding:13px 22px;
+    border-radius:10px;
+    border:none;
+    background:var(--green);
+    color:#fff;
+    font-weight:600;
+    cursor:pointer;
+    letter-spacing:.02em;
+  }
+  .btn:hover{background:var(--green-deep)}
+  .hint{color:var(--text-soft); font-size:14px; margin:8px 0 0}
+
+  .result-list{list-style:none; margin:18px 0 0; padding:0; display:grid; gap:10px}
+  .result-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 16px;
+    border:1px solid var(--paper-dim);
+    border-radius:10px;
+    cursor:pointer;
+    background:var(--paper);
+    transition:border-color .15s;
+  }
+  .result-item:hover{border-color:var(--gold-deep)}
+  .result-item .rname{font-family:'Inter',sans-serif; font-weight:600}
+  .result-item .rmeta{color:var(--text-soft); font-size:14px}
+
+  /* ---------- DETAIL CARD ---------- */
+  .detail{margin-top:20px}
+  .detail-head{display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+  .ring{
+    width:86px; height:86px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    background:conic-gradient(var(--gold) calc(var(--pct,0)*1%), var(--paper-dim) 0);
+    position:relative;
+  }
+  .ring::before{
+    content:""; position:absolute; inset:8px;
+    background:#fff; border-radius:50%;
+  }
+  .ring b{position:relative; font-family:'Inter',sans-serif; font-size:20px}
+  .ring span{position:relative; font-size:10px; color:var(--text-soft); font-family:'Inter',sans-serif}
+  .detail h3{margin:0 0 2px; font-size:22px}
+  .detail .yr{color:var(--text-soft); font-family:'Inter',sans-serif; font-size:14px}
+
+  .badge{
+    display:inline-block; padding:4px 12px; border-radius:20px;
+    font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+  }
+  .badge.ok{background:#e4f2e8; color:var(--ok)}
+  .badge.warn{background:#f7e9d8; color:var(--warn)}
+  .badge.bad{background:#f6e0de; color:var(--bad)}
+  .badge.neutral{background:var(--paper-dim); color:var(--text-soft)}
+
+  .grid-2{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:20px}
+  .stat{
+    border:1px solid var(--paper-dim); border-radius:10px; padding:14px 16px;
+    background:var(--paper);
+  }
+  .stat .label{font-family:'Inter',sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-soft)}
+  .stat .value{font-family:'Inter',sans-serif; font-size:20px; font-weight:700; margin-top:4px}
+
+  .month-strip{display:flex; flex-wrap:wrap; gap:6px; margin-top:20px}
+  .month-chip{
+    font-family:'Inter',sans-serif; font-size:11px;
+    padding:5px 9px; border-radius:6px; background:var(--paper); border:1px solid var(--paper-dim);
+    color:var(--text-soft);
+  }
+  .month-chip.present{background:var(--green); color:#fff; border-color:var(--green-deep)}
+  .month-chip.partial{background:#f7e9d8; color:var(--warn); border-color:#e6cfa8}
+
+  /* ---------- ADMIN ---------- */
+  .lock-card{max-width:420px; margin:0 auto; text-align:center}
+  .lock-card .seal{width:64px; height:64px; margin-bottom:14px}
+  .stat-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin:20px 0 28px}
+  .stat-card{
+    background:var(--ink); color:var(--paper);
+    border-radius:12px; padding:18px;
+  }
+  .stat-card .num{font-family:'Cinzel',serif; font-size:26px; color:var(--gold-bright)}
+  .stat-card .lbl{font-family:'Inter',sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--paper-dim); margin-top:4px}
+
+  table{width:100%; border-collapse:collapse; margin-top:10px; font-size:14px}
+  th, td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--paper-dim)}
+  th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-soft); position:sticky; top:0; background:#fff}
+  tbody tr:hover{background:var(--paper)}
+  .table-wrap{overflow-x:auto; margin-top:12px; max-height:560px; overflow-y:auto; border:1px solid var(--paper-dim); border-radius:10px}
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  select{padding:12px 14px; border-radius:10px; border:1.5px solid var(--paper-dim); background:#fff; font-family:'Inter',sans-serif}
+
+  .footer-note{
+    text-align:center; color:var(--text-soft); font-size:13px;
+    padding:28px 20px 40px; font-family:'Inter',sans-serif;
+  }
+  .config-warning{
+    background:#f6e0de; color:var(--bad); border:1px solid #e2b7b3;
+    padding:14px 18px; border-radius:10px; font-family:'Inter',sans-serif; font-size:14px;
+    max-width:960px; margin:20px auto 0;
+  }
+  .spinner{
+    display:inline-block; width:16px; height:16px; border-radius:50%;
+    border:2px solid var(--paper-dim); border-top-color:var(--gold-deep);
+    animation:spin .7s linear infinite; vertical-align:-3px; margin-right:8px;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="seal"><img src="noli-logo.jpg" alt="Noli Me Tangere Lodge No. 42 seal"></div>
+  <h1 class="lodge-name">Noli Me Tangere Lodge No. 42</h1>
+  <p class="lodge-sub">F. &amp; A.M. · Manila · Instituted 1918</p>
+  <p class="lodge-tag">Membership standing and attendance, drawn live from the Lodge secretary's records.</p>
+</header>
+
+<nav class="ribbon-nav" role="tablist" aria-label="Sections">
+  <button class="ribbon-btn" role="tab" aria-selected="true" data-panel="lookup">Find My Status</button>
+  <button class="ribbon-btn" role="tab" aria-selected="false" data-panel="admin">Officers' Dashboard</button>
+</nav>
+
+<main>
+  <div id="config-warning" class="config-warning" style="display:none">
+    The Apps Script URL hasn't been set yet. Open <code>index.html</code>, find <code>APPS_SCRIPT_URL</code> near the bottom, and paste in your deployed web app URL. See SETUP_GUIDE.md.
+  </div>
+
+  <!-- ===================== MEMBER LOOKUP ===================== -->
+  <section id="panel-lookup" class="panel active">
+    <div class="card">
+      <h2 style="margin-top:0">Find My Status</h2>
+      <p class="hint" style="margin-top:-6px">Search your last name to see your own membership standing and attendance record.</p>
+      <div class="search-row">
+        <input type="text" id="lookup-input" placeholder="e.g. Abad" autocomplete="off">
+        <button class="btn" id="lookup-btn">Search</button>
+      </div>
+      <div id="lookup-status" class="hint"></div>
+      <ul class="result-list" id="lookup-results"></ul>
+      <div id="lookup-detail"></div>
+    </div>
+  </section>
+
+  <!-- ===================== ADMIN ===================== -->
+  <section id="panel-admin" class="panel">
+    <div class="card lock-card" id="admin-lock">
+      <div class="seal"><img src="noli-logo.jpg" alt=""></div>
+      <h2 style="margin:0 0 4px">Officers' Dashboard</h2>
+      <p class="hint">Enter the officers' password to view the full roster and attendance grid.</p>
+      <div class="search-row" style="margin-top:14px">
+        <input type="password" id="admin-pass" placeholder="Password">
+        <button class="btn" id="admin-unlock-btn">Unlock</button>
+      </div>
+      <div id="admin-lock-msg" class="hint"></div>
+    </div>
+
+    <div id="admin-content" style="display:none">
+      <div class="stat-cards" id="admin-stats"></div>
+
+      <div class="card">
+        <h2 style="margin-top:0">Full Roster</h2>
+        <div class="toolbar">
+          <input type="text" id="admin-search" placeholder="Search name…" style="max-width:260px">
+          <select id="admin-status-filter">
+            <option value="">All statuses</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table id="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Year Raised</th><th>Status</th><th>Good Standing</th>
+                <th>Attendance</th><th>Qualified to Vote</th><th>Arrears</th><th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="hint">To edit any of this data, open the Google Sheet directly — this dashboard is read-only and updates automatically after you save changes there.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<p class="footer-note">Noli Me Tangere Lodge No. 42, F.&amp;A.M. — data is maintained in Google Sheets and reflected here automatically.</p>
+
+<script>
+/* =====================================================================
+   CONFIGURATION — paste your deployed Apps Script Web App URL below
+   ===================================================================== */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUcMlS1ePkQiRNTwk8kUTilL0CX7P_-CqAuQBRp9hyj9wK69OXNobEnkFeUze5ErFu/exec';
+
+/* ---------------------------------------------------------------------
+   JSONP helper (avoids CORS issues with Apps Script)
+   --------------------------------------------------------------------- */
+let jsonpCounter = 0;
+function jsonp(params) {
+  return new Promise((resolve, reject) => {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+      document.getElementById('config-warning').style.display = 'block';
+      reject(new Error('Apps Script URL not configured'));
+      return;
+    }
+    const cbName = 'jsonpCb' + (jsonpCounter++);
+    const script = document.createElement('script');
+    const query = new URLSearchParams({ ...params, callback: cbName }).toString();
+    window[cbName] = (data) => {
+      resolve(data);
+      delete window[cbName];
+      script.remove();
+    };
+    script.onerror = () => reject(new Error('Network error contacting the Lodge API'));
+    script.src = APPS_SCRIPT_URL + '?' + query;
+    document.body.appendChild(script);
+  });
+}
+
+/* ---------------------------------------------------------------------
+   NAV
+   --------------------------------------------------------------------- */
+document.querySelectorAll('.ribbon-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ribbon-btn').forEach(b => b.setAttribute('aria-selected', 'false'));
+    btn.setAttribute('aria-selected', 'true');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+  });
+});
+
+/* ---------------------------------------------------------------------
+   MEMBER LOOKUP
+   --------------------------------------------------------------------- */
+function statusBadgeClass(status) {
+  status = (status || '').toLowerCase();
+  if (status.indexOf('regular') !== -1) return 'ok';
+  if (status.indexOf('suspend') !== -1 || status.indexOf('expel') !== -1) return 'bad';
+  if (status.indexOf('deceas') !== -1) return 'neutral';
+  return 'warn';
+}
+
+async function runLookup() {
+  const q = document.getElementById('lookup-input').value.trim();
+  const statusEl = document.getElementById('lookup-status');
+  const resultsEl = document.getElementById('lookup-results');
+  const detailEl = document.getElementById('lookup-detail');
+  resultsEl.innerHTML = '';
+  detailEl.innerHTML = '';
+  if (q.length < 2) {
+    statusEl.textContent = 'Type at least 2 letters of your last name.';
+    return;
+  }
+  statusEl.innerHTML = '<span class="spinner"></span>Searching…';
+  try {
+    const data = await jsonp({ action: 'lookup', q });
+    statusEl.textContent = '';
+    if (!data.matches || data.matches.length === 0) {
+      statusEl.textContent = 'No matching member found. Check the spelling, or ask the secretary.';
+      return;
+    }
+    if (data.matches.length === 1) {
+      renderDetail(data.matches[0]);
+      return;
+    }
+    data.matches.forEach(m => {
+      const li = document.createElement('li');
+      li.className = 'result-item';
+      li.innerHTML = `<span class="rname">${m.fullName}</span><span class="rmeta">Raised ${m.yearRaised || '—'}</span>`;
+      li.addEventListener('click', () => renderDetail(m));
+      resultsEl.appendChild(li);
+    });
+  } catch (err) {
+    statusEl.textContent = err.message;
+  }
+}
+
+function renderDetail(m) {
+  document.getElementById('lookup-results').innerHTML = '';
+  const minAtt = 6;
+  const attTotal = typeof m.attendanceTotal === 'number' ? m.attendanceTotal : (parseInt(m.attendanceTotal) || 0);
+  const pct = Math.max(0, Math.min(100, Math.round((attTotal / minAtt) * 100)));
+  const monthsHtml = (m.months || [])
+    .filter(mo => mo.value)
+    .slice(-12)
+    .map(mo => {
+      const v = (mo.value || '').toString().toUpperCase();
+      const cls = v === 'C' ? 'present' : (v === 'NO' || v === 'NC' ? 'partial' : '');
+      return `<span class="month-chip ${cls}">${mo.month}: ${mo.value}</span>`;
+    }).join('');
+
+  document.getElementById('lookup-detail').innerHTML = `
+    <div class="card detail">
+      <div class="detail-head">
+        <div class="ring" style="--pct:${pct}"><b>${attTotal || 0}</b><span>ATTEND.</span></div>
+        <div>
+          <h3>${m.fullName}</h3>
+          <div class="yr">Raised ${m.yearRaised || '—'}${m.lml === 'Y' ? ' · LML Member' : ''}</div>
+          <span class="badge ${statusBadgeClass(m.status)}" style="margin-top:8px">${m.status || 'Unspecified'}</span>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="stat"><div class="label">In Good Standing</div><div class="value">${m.goodStanding || '—'}</div></div>
+        <div class="stat"><div class="label">Master Mason Proficiency</div><div class="value">${m.proficiency || m.attendanceRemarks ? (m.proficiency || '—') : '—'}</div></div>
+        <div class="stat"><div class="label">Qualified to Vote</div><div class="value">${m.qualifiedToVote || '—'}</div></div>
+        <div class="stat"><div class="label">Outstanding Dues</div><div class="value">${m.arrears ? '₱' + Number(m.arrears).toLocaleString() : '₱0'}</div></div>
+      </div>
+      ${monthsHtml ? `<div class="month-strip">${monthsHtml}</div>` : ''}
+      ${m.attendanceRemarks ? `<p class="hint" style="margin-top:16px">Note: ${m.attendanceRemarks}</p>` : ''}
+    </div>
+  `;
+}
+
+document.getElementById('lookup-btn').addEventListener('click', runLookup);
+document.getElementById('lookup-input').addEventListener('keydown', e => { if (e.key === 'Enter') runLookup(); });
+
+/* ---------------------------------------------------------------------
+   ADMIN DASHBOARD
+   --------------------------------------------------------------------- */
+let fullRoster = [];
+
+async function unlockAdmin() {
+  const pass = document.getElementById('admin-pass').value;
+  const msg = document.getElementById('admin-lock-msg');
+  msg.innerHTML = '<span class="spinner"></span>Checking…';
+  try {
+    const data = await jsonp({ action: 'roster', key: pass });
+    if (data.error) {
+      msg.textContent = 'Incorrect password.';
+      return;
+    }
+    fullRoster = data.roster || [];
+    msg.textContent = '';
+    document.getElementById('admin-lock').style.display = 'none';
+    document.getElementById('admin-content').style.display = 'block';
+    sessionStorage.setItem('nmt_admin_key', pass);
+    renderAdmin();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+}
+document.getElementById('admin-unlock-btn').addEventListener('click', unlockAdmin);
+document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.key === 'Enter') unlockAdmin(); });
+
+function renderAdmin() {
+  // stat cards
+  const statusCounts = {};
+  let totalArrears = 0, goodStanding = 0, qualified = 0;
+  fullRoster.forEach(m => {
+    const s = m.status || 'Unspecified';
+    statusCounts[s] = (statusCounts[s] || 0) + 1;
+    totalArrears += Number(m.arrears) || 0;
+    if (m.goodStanding === 'Y') goodStanding++;
+    if ((m.qualifiedToVote || '').toLowerCase().indexOf('qualified') !== -1) qualified++;
+  });
+  const statsEl = document.getElementById('admin-stats');
+  statsEl.innerHTML = '';
+  const cards = [
+    ['Total Members', fullRoster.length],
+    ['In Good Standing', goodStanding],
+    ['Qualified to Vote', qualified],
+    ['Total Arrears', '₱' + totalArrears.toLocaleString()],
+  ];
+  cards.forEach(([lbl, num]) => {
+    const div = document.createElement('div');
+    div.className = 'stat-card';
+    div.innerHTML = `<div class="num">${num}</div><div class="lbl">${lbl}</div>`;
+    statsEl.appendChild(div);
+  });
+
+  // status filter options
+  const filter = document.getElementById('admin-status-filter');
+  filter.innerHTML = '<option value="">All statuses</option>' +
+    Object.keys(statusCounts).sort().map(s => `<option value="${s}">${s} (${statusCounts[s]})</option>`).join('');
+
+  renderTable();
+}
+
+function renderTable() {
+  const search = document.getElementById('admin-search').value.toLowerCase();
+  const statusFilter = document.getElementById('admin-status-filter').value;
+  const tbody = document.querySelector('#admin-table tbody');
+  tbody.innerHTML = '';
+  fullRoster
+    .filter(m => {
+      const matchesSearch = !search || m.fullName.toLowerCase().indexOf(search) !== -1;
+      const matchesStatus = !statusFilter || m.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .forEach(m => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${m.fullName}</td>
+        <td>${m.yearRaised || '—'}</td>
+        <td><span class="badge ${statusBadgeClass(m.status)}">${m.status || '—'}</span></td>
+        <td>${m.goodStanding || '—'}</td>
+        <td>${m.attendanceTotal ?? '—'}</td>
+        <td>${m.qualifiedToVote || '—'}</td>
+        <td>${m.arrears ? '₱' + Number(m.arrears).toLocaleString() : '—'}</td>
+        <td>${m.remarks || m.attendanceRemarks || ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+}
+document.getElementById('admin-search').addEventListener('input', renderTable);
+document.getElementById('admin-status-filter').addEventListener('change', renderTable);
+</script>
+</body>
+</html>
