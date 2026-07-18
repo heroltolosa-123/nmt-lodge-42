@@ -27,6 +27,16 @@
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
+  .icon{width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; vertical-align:-3px}
+  .icon-lg{width:26px; height:26px}
+  .btn-icon-row{display:inline-flex; align-items:center; gap:8px}
+  .stat-card .icon-lg{color:var(--gold-bright); margin-bottom:6px}
+  .search-wrap{position:relative; flex:1}
+  .search-wrap .icon{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-soft); pointer-events:none}
+  .search-wrap input{padding-left:40px; width:100%}
+  th .icon{margin-right:4px; color:var(--text-soft)}
+  .card h2{display:flex; align-items:center; gap:10px}
+  .card h2 .icon{color:var(--gold-deep)}
   body{
     margin:0;
     background:var(--paper);
@@ -274,8 +284,12 @@
 </header>
 
 <nav class="ribbon-nav" role="tablist" aria-label="Sections">
-  <button class="ribbon-btn main-tab" role="tab" aria-selected="true" data-panel="lookup">Find My Status</button>
-  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="admin">Officers' Dashboard</button>
+  <button class="ribbon-btn main-tab" role="tab" aria-selected="true" data-panel="lookup">
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Find My Status</span>
+  </button>
+  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="admin">
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6z"/></svg>Officers' Dashboard</span>
+  </button>
 </nav>
 
 <main>
@@ -286,11 +300,14 @@
   <!-- ===================== MEMBER LOOKUP ===================== -->
   <section id="panel-lookup" class="panel active">
     <div class="card">
-      <h2 style="margin-top:0">Find My Status</h2>
+      <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Find My Status</h2>
       <p class="hint" style="margin-top:-6px">Search your last name to see your own membership standing and attendance record.</p>
       <div class="search-row">
-        <input type="text" id="lookup-input" placeholder="e.g. Abad" autocomplete="off">
-        <button class="btn" id="lookup-btn">Search</button>
+        <div class="search-wrap">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="lookup-input" placeholder="e.g. Abad" autocomplete="off">
+        </div>
+        <button class="btn" id="lookup-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</span></button>
       </div>
       <div id="lookup-status" class="hint"></div>
       <ul class="result-list" id="lookup-results"></ul>
@@ -302,10 +319,13 @@
   <section id="panel-admin" class="panel">
     <div class="card lock-card" id="admin-lock">
       <div class="seal"><img src="noli-logo.jpg" alt=""></div>
-      <h2 style="margin:0 0 4px">Officers' Dashboard</h2>
+      <h2 style="margin:0 0 4px;justify-content:center"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Officers' Dashboard</h2>
       <p class="hint">Enter the officers' password to view the full roster and attendance grid.</p>
       <div class="search-row" style="margin-top:14px">
-        <input type="password" id="admin-pass" placeholder="Password">
+        <div class="search-wrap">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" id="admin-pass" placeholder="Password">
+        </div>
         <button class="btn" id="admin-unlock-btn">Unlock</button>
       </div>
       <div id="admin-lock-msg" class="hint"></div>
@@ -315,27 +335,52 @@
       <div class="stat-cards" id="admin-stats"></div>
 
       <div class="ribbon-nav" style="margin-top:0" role="tablist" aria-label="Officer tools">
-        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="true" data-sub="roster">Roster</button>
-        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="rollcall">Roll Call</button>
-        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="dues">Log Dues</button>
-        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="addmember">Add Member</button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="true" data-sub="roster">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Roster</span>
+        </button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="rollcall">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>Roll Call</span>
+        </button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="dues">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/></svg>Log Dues</span>
+        </button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="addmember">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Add Member</span>
+        </button>
       </div>
 
       <!-- ROSTER -->
       <div class="card admin-sub" id="sub-roster">
-        <h2 style="margin-top:0">Full Roster</h2>
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Full Roster</h2>
         <div class="toolbar">
-          <input type="text" id="admin-search" placeholder="Search name…" style="max-width:260px">
+          <div class="search-wrap" style="max-width:260px">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="admin-search" placeholder="Search name…">
+          </div>
           <select id="admin-status-filter">
             <option value="">All statuses</option>
+          </select>
+          <select id="admin-goodstanding-filter">
+            <option value="">Good standing: All</option>
+            <option value="Y">Good standing: Y</option>
+            <option value="N">Good standing: N</option>
+          </select>
+          <select id="admin-vote-filter">
+            <option value="">Qualified to vote: All</option>
+            <option value="Y">Qualified to vote: Y</option>
+            <option value="N">Qualified to vote: N</option>
           </select>
         </div>
         <div class="table-wrap">
           <table id="admin-table">
             <thead>
               <tr>
-                <th>Name</th><th>Year Raised</th><th>Status</th><th>Good Standing</th>
-                <th>Attendance</th><th>Qualified to Vote</th><th>Arrears</th><th>Remarks</th><th></th>
+                <th>Name</th><th>Year Raised</th><th>Status</th>
+                <th><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Good Standing</th>
+                <th><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Attendance</th>
+                <th><svg class="icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Qualified to Vote</th>
+                <th><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/></svg>Arrears</th>
+                <th>Remarks</th><th></th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -346,7 +391,7 @@
 
       <!-- EDIT MEMBER (hidden until triggered) -->
       <div class="card" id="edit-member-card" style="display:none">
-        <h2 style="margin-top:0">Edit Member</h2>
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit Member</h2>
         <input type="hidden" id="edit-member-id">
         <div class="grid-2">
           <div><label class="hint">Status</label><select id="edit-status"></select></div>
@@ -357,7 +402,7 @@
         <label class="hint" style="display:block;margin-top:14px">Remarks</label>
         <input type="text" id="edit-remarks" style="width:100%">
         <div class="search-row" style="margin-top:16px">
-          <button class="btn" id="edit-save-btn">Save Changes</button>
+          <button class="btn" id="edit-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save Changes</span></button>
           <button class="btn" id="edit-cancel-btn" style="background:#8a8368">Cancel</button>
         </div>
         <div id="edit-msg" class="hint"></div>
@@ -365,11 +410,11 @@
 
       <!-- ROLL CALL -->
       <div class="card admin-sub" id="sub-rollcall" style="display:none">
-        <h2 style="margin-top:0">Roll Call</h2>
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>Roll Call</h2>
         <p class="hint" style="margin-top:-6px">Pick the meeting date, set each member's code, then save once. Re-saving the same month updates existing entries instead of duplicating them.</p>
         <div class="search-row">
           <input type="month" id="rollcall-month">
-          <button class="btn" id="rollcall-save-btn">Save Roll Call</button>
+          <button class="btn" id="rollcall-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save Roll Call</span></button>
         </div>
         <div id="rollcall-msg" class="hint"></div>
         <div class="table-wrap" style="margin-top:14px">
@@ -382,7 +427,7 @@
 
       <!-- LOG DUES -->
       <div class="card admin-sub" id="sub-dues" style="display:none">
-        <h2 style="margin-top:0">Log a Dues Payment</h2>
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/></svg>Log a Dues Payment</h2>
         <div class="grid-2">
           <div>
             <label class="hint">Member</label>
@@ -402,14 +447,14 @@
         <label class="hint" style="display:block;margin-top:14px">Note (OR number, remarks, etc.)</label>
         <input type="text" id="dues-note" style="width:100%">
         <div class="search-row" style="margin-top:16px">
-          <button class="btn" id="dues-save-btn">Save Payment</button>
+          <button class="btn" id="dues-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save Payment</span></button>
         </div>
         <div id="dues-msg" class="hint"></div>
       </div>
 
       <!-- ADD MEMBER -->
       <div class="card admin-sub" id="sub-addmember" style="display:none">
-        <h2 style="margin-top:0">Add a New Member</h2>
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Add a New Member</h2>
         <div class="grid-2">
           <div><label class="hint">Surname</label><input type="text" id="new-surname"></div>
           <div><label class="hint">First Name</label><input type="text" id="new-first"></div>
@@ -421,7 +466,7 @@
         <label class="hint" style="display:block;margin-top:14px">Remarks</label>
         <input type="text" id="new-remarks" style="width:100%">
         <div class="search-row" style="margin-top:16px">
-          <button class="btn" id="new-member-save-btn">Add Member</button>
+          <button class="btn" id="new-member-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Add Member</span></button>
         </div>
         <div id="new-member-msg" class="hint"></div>
       </div>
@@ -546,9 +591,9 @@ function renderDetail(m) {
         </div>
       </div>
       <div class="grid-2">
-        <div class="stat"><div class="label">In Good Standing</div><div class="value">${m.goodStanding || '—'}</div></div>
+        <div class="stat"><div class="label">In Good Standing</div><div class="value">${ynIcon(m.goodStanding)} ${m.goodStanding || ''}</div></div>
         <div class="stat"><div class="label">Master Mason Proficiency</div><div class="value">${m.proficiency || m.attendanceRemarks ? (m.proficiency || '—') : '—'}</div></div>
-        <div class="stat"><div class="label">Qualified to Vote</div><div class="value">${m.qualifiedToVote || '—'}</div></div>
+        <div class="stat"><div class="label">Qualified to Vote</div><div class="value">${ynIcon(m.qualifiedToVote)} ${m.qualifiedToVote || ''}</div></div>
         <div class="stat"><div class="label">Outstanding Dues</div><div class="value">${m.arrears ? '₱' + Number(m.arrears).toLocaleString() : '₱0'}</div></div>
       </div>
       ${monthsHtml ? `<div class="month-strip">${monthsHtml}</div>` : ''}
@@ -602,15 +647,15 @@ function renderAdmin() {
   const statsEl = document.getElementById('admin-stats');
   statsEl.innerHTML = '';
   const cards = [
-    ['Total Members', fullRoster.length],
-    ['In Good Standing', goodStanding],
-    ['Qualified to Vote', qualified],
-    ['Total Arrears', '₱' + totalArrears.toLocaleString()],
+    ['Total Members', fullRoster.length, '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>'],
+    ['In Good Standing', goodStanding, '<path d="M20 6 9 17l-5-5"/>'],
+    ['Qualified to Vote', qualified, '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'],
+    ['Total Arrears', '₱' + totalArrears.toLocaleString(), '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/>'],
   ];
-  cards.forEach(([lbl, num]) => {
+  cards.forEach(([lbl, num, iconPath]) => {
     const div = document.createElement('div');
     div.className = 'stat-card';
-    div.innerHTML = `<div class="num">${num}</div><div class="lbl">${lbl}</div>`;
+    div.innerHTML = `<svg class="icon icon-lg" viewBox="0 0 24 24">${iconPath}</svg><div class="num">${num}</div><div class="lbl">${lbl}</div>`;
     statsEl.appendChild(div);
   });
 
@@ -622,16 +667,27 @@ function renderAdmin() {
   renderTable();
 }
 
+function ynIcon(v) {
+  const val = (v || '').toString().toUpperCase();
+  if (val === 'Y') return '<svg class="icon" style="color:var(--ok)" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
+  if (val === 'N') return '<svg class="icon" style="color:var(--bad)" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  return '—';
+}
+
 function renderTable() {
   const search = document.getElementById('admin-search').value.toLowerCase();
   const statusFilter = document.getElementById('admin-status-filter').value;
+  const goodStandingFilter = document.getElementById('admin-goodstanding-filter').value;
+  const voteFilter = document.getElementById('admin-vote-filter').value;
   const tbody = document.querySelector('#admin-table tbody');
   tbody.innerHTML = '';
   fullRoster
     .filter(m => {
       const matchesSearch = !search || m.fullName.toLowerCase().indexOf(search) !== -1;
       const matchesStatus = !statusFilter || m.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesGoodStanding = !goodStandingFilter || (m.goodStanding || '').toUpperCase() === goodStandingFilter;
+      const matchesVote = !voteFilter || (m.qualifiedToVote || '').toUpperCase() === voteFilter;
+      return matchesSearch && matchesStatus && matchesGoodStanding && matchesVote;
     })
     .forEach(m => {
       const tr = document.createElement('tr');
@@ -639,12 +695,12 @@ function renderTable() {
         <td>${m.fullName}</td>
         <td>${m.yearRaised || '—'}</td>
         <td><span class="badge ${statusBadgeClass(m.status)}">${m.status || '—'}</span></td>
-        <td>${m.goodStanding || '—'}</td>
+        <td>${ynIcon(m.goodStanding)}</td>
         <td>${m.attendanceTotal ?? '—'}</td>
-        <td>${m.qualifiedToVote || '—'}</td>
+        <td>${ynIcon(m.qualifiedToVote)}</td>
         <td>${m.arrears ? '₱' + Number(m.arrears).toLocaleString() : '—'}</td>
         <td>${m.remarks || m.attendanceRemarks || ''}</td>
-        <td><button class="btn" style="padding:6px 12px;font-size:13px" data-edit="${m.memberId}">Edit</button></td>
+        <td><button class="btn" style="padding:6px 12px;font-size:13px" data-edit="${m.memberId}"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</span></button></td>
       `;
       tbody.appendChild(tr);
     });
@@ -654,6 +710,8 @@ function renderTable() {
 }
 document.getElementById('admin-search').addEventListener('input', renderTable);
 document.getElementById('admin-status-filter').addEventListener('change', renderTable);
+document.getElementById('admin-goodstanding-filter').addEventListener('change', renderTable);
+document.getElementById('admin-vote-filter').addEventListener('change', renderTable);
 
 /* ---------------------------------------------------------------------
    WRITE HELPER — POST to Apps Script as text/plain to avoid CORS preflight
