@@ -208,6 +208,24 @@
   .detail h3{margin:0 0 2px; font-size:22px}
   .detail .yr{color:var(--text-soft); font-family:'Inter',sans-serif; font-size:14px}
 
+  .avatar{
+    width:72px; height:72px; border-radius:50%; object-fit:cover;
+    border:3px solid var(--gold); background:var(--paper-dim); flex-shrink:0;
+  }
+  .avatar-fallback{
+    width:72px; height:72px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--green); color:var(--paper); border:3px solid var(--gold);
+    font-family:'Cinzel',serif; font-size:24px;
+  }
+  .avatar-sm{width:40px; height:40px; border-width:2px; font-size:14px}
+  .celebrant-item{display:flex; align-items:center; gap:14px; padding:10px 6px; border-bottom:1px solid var(--paper-dim)}
+  .celebrant-item:last-child{border-bottom:none}
+  .celebrant-day{
+    font-family:'Cinzel',serif; font-weight:700; color:var(--green); text-align:center;
+    min-width:44px; background:var(--paper); border:1px solid var(--paper-dim); border-radius:8px; padding:4px 0; font-size:13px;
+  }
+
   .badge{
     display:inline-block; padding:4px 12px; border-radius:20px;
     font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
@@ -313,6 +331,11 @@
       <ul class="result-list" id="lookup-results"></ul>
       <div id="lookup-detail"></div>
     </div>
+
+    <div class="card" id="celebrants-card" style="display:none">
+      <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C9 2 12 7 12 7z"/></svg><span id="celebrants-title">This Month's Celebrants</span></h2>
+      <div id="celebrants-list"></div>
+    </div>
   </section>
 
   <!-- ===================== ADMIN ===================== -->
@@ -401,6 +424,23 @@
         </div>
         <label class="hint" style="display:block;margin-top:14px">Remarks</label>
         <input type="text" id="edit-remarks" style="width:100%">
+
+        <h3 style="margin:22px 0 4px;font-size:16px">Personal Profile</h3>
+        <p class="hint" style="margin-top:0">Optional — fill in as you get the information.</p>
+        <div class="grid-2">
+          <div><label class="hint">Date of Birth</label><input type="date" id="edit-dob"></div>
+          <div><label class="hint">Contact Number</label><input type="tel" id="edit-contact" placeholder="09XX XXX XXXX"></div>
+          <div><label class="hint">Email Address</label><input type="email" id="edit-email"></div>
+          <div><label class="hint">Occupation</label><input type="text" id="edit-occupation"></div>
+        </div>
+        <label class="hint" style="display:block;margin-top:14px">Home Address</label>
+        <input type="text" id="edit-address" style="width:100%">
+        <label class="hint" style="display:block;margin-top:14px">Photo URL <span style="font-weight:400">(paste a shareable image link — Google Drive, Imgur, etc.)</span></label>
+        <div class="search-row" style="align-items:flex-start">
+          <input type="url" id="edit-photourl" placeholder="https://…" style="flex:1">
+          <div id="edit-photo-preview"></div>
+        </div>
+
         <div class="search-row" style="margin-top:16px">
           <button class="btn" id="edit-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save Changes</span></button>
           <button class="btn" id="edit-cancel-btn" style="background:#8a8368">Cancel</button>
@@ -465,6 +505,20 @@
         </div>
         <label class="hint" style="display:block;margin-top:14px">Remarks</label>
         <input type="text" id="new-remarks" style="width:100%">
+
+        <h3 style="margin:22px 0 4px;font-size:16px">Personal Profile</h3>
+        <p class="hint" style="margin-top:0">Optional — fill in as you get the information.</p>
+        <div class="grid-2">
+          <div><label class="hint">Date of Birth</label><input type="date" id="new-dob"></div>
+          <div><label class="hint">Contact Number</label><input type="tel" id="new-contact" placeholder="09XX XXX XXXX"></div>
+          <div><label class="hint">Email Address</label><input type="email" id="new-email"></div>
+          <div><label class="hint">Occupation</label><input type="text" id="new-occupation"></div>
+        </div>
+        <label class="hint" style="display:block;margin-top:14px">Home Address</label>
+        <input type="text" id="new-address" style="width:100%">
+        <label class="hint" style="display:block;margin-top:14px">Photo URL <span style="font-weight:400">(paste a shareable image link — Google Drive, Imgur, etc.)</span></label>
+        <input type="url" id="new-photourl" placeholder="https://…" style="width:100%">
+
         <div class="search-row" style="margin-top:16px">
           <button class="btn" id="new-member-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Add Member</span></button>
         </div>
@@ -566,6 +620,19 @@ async function runLookup() {
   }
 }
 
+function initials(name) {
+  return (name || '').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function avatarHtml(m, sizeClass) {
+  const cls = sizeClass ? `avatar ${sizeClass}` : 'avatar';
+  const fallbackCls = sizeClass ? `avatar-fallback ${sizeClass}` : 'avatar-fallback';
+  if (m.photoUrl) {
+    return `<img class="${cls}" src="${m.photoUrl}" alt="${m.fullName}" onerror="this.outerHTML='<div class=\\'${fallbackCls}\\'>${initials(m.fullName)}</div>'">`;
+  }
+  return `<div class="${fallbackCls}">${initials(m.fullName)}</div>`;
+}
+
 function renderDetail(m) {
   document.getElementById('lookup-results').innerHTML = '';
   const minAtt = 6;
@@ -583,6 +650,7 @@ function renderDetail(m) {
   document.getElementById('lookup-detail').innerHTML = `
     <div class="card detail">
       <div class="detail-head">
+        ${avatarHtml(m)}
         <div class="ring" style="--pct:${pct}"><b>${attTotal || 0}</b><span>ATTEND.</span></div>
         <div>
           <h3>${m.fullName}</h3>
@@ -604,6 +672,34 @@ function renderDetail(m) {
 
 document.getElementById('lookup-btn').addEventListener('click', runLookup);
 document.getElementById('lookup-input').addEventListener('keydown', e => { if (e.key === 'Enter') runLookup(); });
+
+/* ---------------------------------------------------------------------
+   BIRTHDAY CELEBRANTS — loads automatically, no search needed
+   --------------------------------------------------------------------- */
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+async function loadCelebrants() {
+  try {
+    const data = await jsonp({ action: 'birthdays' });
+    const card = document.getElementById('celebrants-card');
+    const list = document.getElementById('celebrants-list');
+    if (!data.celebrants || data.celebrants.length === 0) { card.style.display = 'none'; return; }
+    document.getElementById('celebrants-title').textContent = `${MONTH_NAMES[data.month - 1]} Celebrants`;
+    list.innerHTML = data.celebrants.map(c => `
+      <div class="celebrant-item">
+        ${avatarHtml(c, 'avatar-sm')}
+        <div>
+          <div style="font-family:'Inter',sans-serif;font-weight:600">${c.fullName}</div>
+          <div class="hint" style="margin:0">${MONTH_NAMES[c.month - 1]} ${c.day}</div>
+        </div>
+      </div>
+    `).join('');
+    card.style.display = 'block';
+  } catch (err) {
+    // quiet failure — this widget is a nice-to-have, not core functionality
+  }
+}
+loadCelebrants();
 
 /* ---------------------------------------------------------------------
    ADMIN DASHBOARD
@@ -753,6 +849,11 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
 /* ---------------------------------------------------------------------
    EDIT MEMBER
    --------------------------------------------------------------------- */
+function updatePhotoPreview(url, targetId) {
+  const el = document.getElementById(targetId);
+  el.innerHTML = url ? avatarHtml({ fullName: '', photoUrl: url }, 'avatar-sm') : '';
+}
+
 function openEditMember(memberId) {
   const m = fullRoster.find(x => x.memberId === memberId);
   if (!m) return;
@@ -764,9 +865,17 @@ function openEditMember(memberId) {
   document.getElementById('edit-goodstanding').value = m.goodStanding || '';
   document.getElementById('edit-arrears').value = m.arrears || 0;
   document.getElementById('edit-remarks').value = m.remarks || '';
+  document.getElementById('edit-dob').value = m.dateOfBirth || '';
+  document.getElementById('edit-contact').value = m.contactNumber || '';
+  document.getElementById('edit-email').value = m.email || '';
+  document.getElementById('edit-occupation').value = m.occupation || '';
+  document.getElementById('edit-address').value = m.address || '';
+  document.getElementById('edit-photourl').value = m.photoUrl || '';
+  updatePhotoPreview(m.photoUrl, 'edit-photo-preview');
   document.getElementById('edit-msg').textContent = '';
   document.getElementById('edit-member-card').style.display = 'block';
 }
+document.getElementById('edit-photourl').addEventListener('input', e => updatePhotoPreview(e.target.value.trim(), 'edit-photo-preview'));
 document.getElementById('edit-cancel-btn').addEventListener('click', () => {
   document.getElementById('edit-member-card').style.display = 'none';
   document.getElementById('sub-roster').style.display = 'block';
@@ -783,7 +892,13 @@ document.getElementById('edit-save-btn').addEventListener('click', async () => {
         proficiency: document.getElementById('edit-proficiency').value,
         goodStanding: document.getElementById('edit-goodstanding').value,
         legacyArrears: document.getElementById('edit-arrears').value,
-        remarks: document.getElementById('edit-remarks').value
+        remarks: document.getElementById('edit-remarks').value,
+        dateOfBirth: document.getElementById('edit-dob').value,
+        contactNumber: document.getElementById('edit-contact').value,
+        email: document.getElementById('edit-email').value,
+        occupation: document.getElementById('edit-occupation').value,
+        address: document.getElementById('edit-address').value,
+        photoUrl: document.getElementById('edit-photourl').value
       }
     });
     if (result.error) { msg.textContent = result.error; return; }
@@ -895,12 +1010,20 @@ document.getElementById('new-member-save-btn').addEventListener('click', async (
         yearRaised: document.getElementById('new-yearraised').value,
         status: document.getElementById('new-status').value,
         proficiency: document.getElementById('new-proficiency').value,
-        remarks: document.getElementById('new-remarks').value
+        remarks: document.getElementById('new-remarks').value,
+        dateOfBirth: document.getElementById('new-dob').value,
+        contactNumber: document.getElementById('new-contact').value,
+        email: document.getElementById('new-email').value,
+        occupation: document.getElementById('new-occupation').value,
+        address: document.getElementById('new-address').value,
+        photoUrl: document.getElementById('new-photourl').value
       }
     });
     if (result.error) { msg.textContent = result.error; return; }
     msg.textContent = `Added as ${result.memberId}.`;
-    ['new-surname', 'new-first', 'new-middle', 'new-yearraised', 'new-remarks'].forEach(id => document.getElementById(id).value = '');
+    ['new-surname', 'new-first', 'new-middle', 'new-yearraised', 'new-remarks',
+     'new-dob', 'new-contact', 'new-email', 'new-occupation', 'new-address', 'new-photourl']
+      .forEach(id => document.getElementById(id).value = '');
     await refreshRoster();
   } catch (err) {
     msg.textContent = err.message;
