@@ -275,8 +275,28 @@
   .gallery-card{
     background:#fff; border:1px solid var(--paper-dim); border-radius:var(--radius);
     overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; flex-direction:column;
+    border-top:4px solid var(--green);
+    transition:transform .25s ease, box-shadow .25s ease;
+    opacity:0; transform:translateY(14px);
+    animation:card-in .5s ease forwards;
   }
-  .gallery-photo{width:100%; height:170px; object-fit:cover; background:var(--paper-dim); display:block}
+  .gallery-card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 14px 28px rgba(0,0,0,.14);
+  }
+  .gallery-card[data-cat="Accomplishment"]{ border-top-color:var(--gold); }
+  .gallery-card[data-cat="Event"]{ border-top-color:#7a3b3b; }
+  @keyframes card-in{ to{ opacity:1; transform:translateY(0); } }
+  @media (prefers-reduced-motion: reduce){
+    .gallery-card{ opacity:1; transform:none; animation:none; transition:none; }
+  }
+
+  .gallery-photo-wrap{position:relative; overflow:hidden; height:170px}
+  .gallery-photo{
+    width:100%; height:170px; object-fit:cover; background:var(--paper-dim); display:block;
+    transition:transform .5s ease;
+  }
+  .gallery-card:hover .gallery-photo{ transform:scale(1.07); }
   .gallery-photo-fallback{
     width:100%; height:170px; display:flex; align-items:center; justify-content:center;
     background:linear-gradient(135deg, var(--green), var(--green-deep)); color:var(--gold-bright);
@@ -824,7 +844,8 @@ function avatarHtml(m, sizeClass) {
   const cls = sizeClass ? `avatar ${sizeClass}` : 'avatar';
   const fallbackCls = sizeClass ? `avatar-fallback ${sizeClass}` : 'avatar-fallback';
   if (m.photoUrl) {
-    return `<img class="${cls}" src="${m.photoUrl}" alt="${m.fullName}" onerror="this.outerHTML='<div class=\\'${fallbackCls}\\'>${initials(m.fullName)}</div>'">`;
+    return `<img class="${cls}" src="${m.photoUrl}" alt="${m.fullName}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+           `<div class="${fallbackCls}" style="display:none">${initials(m.fullName)}</div>`;
   }
   return `<div class="${fallbackCls}">${initials(m.fullName)}</div>`;
 }
@@ -902,9 +923,12 @@ loadCelebrants();
    --------------------------------------------------------------------- */
 function activityPhotoBlock(a) {
   if (a.photoUrl) {
-    return `<img class="gallery-photo" src="${a.photoUrl}" alt="${a.title}" onerror="this.outerHTML='<div class=\\'gallery-photo-fallback\\'>${galleryFallbackIcon()}</div>'">`;
+    return `<div class="gallery-photo-wrap">` +
+           `<img class="gallery-photo" src="${a.photoUrl}" alt="${a.title}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+           `<div class="gallery-photo-fallback" style="display:none">${galleryFallbackIcon()}</div>` +
+           `</div>`;
   }
-  return `<div class="gallery-photo-fallback">${galleryFallbackIcon()}</div>`;
+  return `<div class="gallery-photo-wrap"><div class="gallery-photo-fallback">${galleryFallbackIcon()}</div></div>`;
 }
 function galleryFallbackIcon() {
   return `<svg viewBox="0 0 24 24" style="width:40px;height:40px;stroke:currentColor;fill:none;stroke-width:1.5"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>`;
@@ -927,8 +951,8 @@ async function loadPublicGallery() {
       grid.innerHTML = `<div class="gallery-empty">Nothing posted yet — check back soon.</div>`;
       return;
     }
-    grid.innerHTML = activities.map(a => `
-      <div class="gallery-card">
+    grid.innerHTML = activities.map((a, i) => `
+      <div class="gallery-card" data-cat="${a.category || 'Activity'}" style="animation-delay:${Math.min(i * 80, 600)}ms">
         ${activityPhotoBlock(a)}
         <div class="gallery-body">
           <span class="cat-badge">${a.category || 'Activity'}</span>
