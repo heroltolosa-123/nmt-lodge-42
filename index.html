@@ -270,6 +270,38 @@
     min-width:44px; background:var(--paper); border:1px solid var(--paper-dim); border-radius:8px; padding:4px 0; font-size:13px;
   }
 
+  /* ---------- ACTIVITIES GALLERY ---------- */
+  .gallery-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; margin-top:18px}
+  .gallery-card{
+    background:#fff; border:1px solid var(--paper-dim); border-radius:var(--radius);
+    overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; flex-direction:column;
+  }
+  .gallery-photo{width:100%; height:170px; object-fit:cover; background:var(--paper-dim); display:block}
+  .gallery-photo-fallback{
+    width:100%; height:170px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg, var(--green), var(--green-deep)); color:var(--gold-bright);
+  }
+  .gallery-body{padding:16px}
+  .gallery-body .cat-badge{
+    display:inline-block; font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase;
+    letter-spacing:.05em; font-weight:700; padding:3px 10px; border-radius:20px;
+    background:var(--paper); color:var(--gold-deep); border:1px solid var(--paper-dim); margin-bottom:8px;
+  }
+  .gallery-body h3{margin:0 0 4px; font-size:18px}
+  .gallery-body .gdate{font-family:'Inter',sans-serif; font-size:12px; color:var(--text-soft); margin-bottom:8px}
+  .gallery-body p{margin:0; font-size:15px; color:var(--text)}
+  .gallery-empty{text-align:center; color:var(--text-soft); padding:40px 20px}
+
+  .activity-row{display:flex; align-items:center; gap:12px; padding:12px 6px; border-bottom:1px solid var(--paper-dim)}
+  .activity-row:last-child{border-bottom:none}
+  .activity-row .athumb{width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper-dim); flex-shrink:0}
+  .activity-row .ainfo{flex:1; min-width:0}
+  .activity-row .ainfo .atitle{font-family:'Inter',sans-serif; font-weight:600}
+  .activity-row .aactions{display:flex; gap:8px; flex-shrink:0}
+  .btn-sm{padding:6px 12px; font-size:13px}
+  .btn-danger{background:#a3312a}
+  .btn-danger:hover{background:#822620}
+
   .badge{
     display:inline-block; padding:4px 12px; border-radius:20px;
     font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
@@ -398,6 +430,9 @@
   <button class="ribbon-btn main-tab" role="tab" aria-selected="true" data-panel="lookup">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Find My Status</span>
   </button>
+  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="activities">
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Accomplishments &amp; Activities</span>
+  </button>
   <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="admin">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6z"/></svg>Officers' Dashboard</span>
   </button>
@@ -428,6 +463,16 @@
     <div class="card" id="celebrants-card" style="display:none">
       <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C9 2 12 7 12 7z"/></svg><span id="celebrants-title">This Month's Celebrants</span></h2>
       <div id="celebrants-list"></div>
+    </div>
+  </section>
+
+  <!-- ===================== ACCOMPLISHMENTS & ACTIVITIES (public gallery) ===================== -->
+  <section id="panel-activities" class="panel">
+    <div class="card">
+      <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Accomplishments &amp; Activities</h2>
+      <p class="hint" style="margin-top:-6px">A running record of the Lodge's events, projects, and milestones.</p>
+      <div id="gallery-status" class="hint"><span class="spinner"></span>Loading…</div>
+      <div class="gallery-grid" id="gallery-grid"></div>
     </div>
   </section>
 
@@ -462,6 +507,9 @@
         </button>
         <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="addmember">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Add Member</span>
+        </button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="activities">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Activities</span>
         </button>
       </div>
 
@@ -616,6 +664,38 @@
           <button class="btn" id="new-member-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Add Member</span></button>
         </div>
         <div id="new-member-msg" class="hint"></div>
+      </div>
+
+      <!-- ACTIVITIES MANAGEMENT -->
+      <div class="card admin-sub" id="sub-activities" style="display:none">
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Posted Activities</h2>
+        <p class="hint" style="margin-top:-6px">Everything here shows up publicly under "Accomplishments &amp; Activities."</p>
+        <div class="search-row">
+          <button class="btn" id="activity-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post New Activity</span></button>
+        </div>
+        <div id="activities-admin-list"></div>
+      </div>
+
+      <div class="card" id="activity-form-card" style="display:none">
+        <h2 style="margin-top:0" id="activity-form-title"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Post an Activity</h2>
+        <input type="hidden" id="activity-id">
+        <div class="grid-2">
+          <div><label class="hint">Title</label><input type="text" id="activity-title" placeholder="e.g. Blood Donation Drive"></div>
+          <div><label class="hint">Date</label><input type="date" id="activity-date"></div>
+          <div><label class="hint">Category</label>
+            <select id="activity-category">
+              <option>Activity</option><option>Accomplishment</option><option>Event</option>
+            </select>
+          </div>
+          <div><label class="hint">Photo URL <span style="font-weight:400">(Google Drive uc?id=, Imgur, etc.)</span></label><input type="url" id="activity-photourl" placeholder="https://…"></div>
+        </div>
+        <label class="hint" style="display:block;margin-top:14px">Description</label>
+        <textarea id="activity-description" rows="4" style="width:100%;padding:13px 16px;border:1.5px solid var(--paper-dim);border-radius:10px;font-size:16px;background:var(--paper);font-family:'EB Garamond',serif"></textarea>
+        <div class="search-row" style="margin-top:16px">
+          <button class="btn" id="activity-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save</span></button>
+          <button class="btn" id="activity-cancel-btn" style="background:#8a8368">Cancel</button>
+        </div>
+        <div id="activity-form-msg" class="hint"></div>
       </div>
     </div>
   </section>
@@ -818,6 +898,148 @@ async function loadCelebrants() {
 loadCelebrants();
 
 /* ---------------------------------------------------------------------
+   ACCOMPLISHMENTS & ACTIVITIES — public gallery
+   --------------------------------------------------------------------- */
+function activityPhotoBlock(a) {
+  if (a.photoUrl) {
+    return `<img class="gallery-photo" src="${a.photoUrl}" alt="${a.title}" onerror="this.outerHTML='<div class=\\'gallery-photo-fallback\\'>${galleryFallbackIcon()}</div>'">`;
+  }
+  return `<div class="gallery-photo-fallback">${galleryFallbackIcon()}</div>`;
+}
+function galleryFallbackIcon() {
+  return `<svg viewBox="0 0 24 24" style="width:40px;height:40px;stroke:currentColor;fill:none;stroke-width:1.5"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>`;
+}
+function formatActivityDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+async function loadPublicGallery() {
+  const statusEl = document.getElementById('gallery-status');
+  const grid = document.getElementById('gallery-grid');
+  try {
+    const data = await jsonp({ action: 'activities' });
+    const activities = data.activities || [];
+    statusEl.style.display = 'none';
+    if (activities.length === 0) {
+      grid.innerHTML = `<div class="gallery-empty">Nothing posted yet — check back soon.</div>`;
+      return;
+    }
+    grid.innerHTML = activities.map(a => `
+      <div class="gallery-card">
+        ${activityPhotoBlock(a)}
+        <div class="gallery-body">
+          <span class="cat-badge">${a.category || 'Activity'}</span>
+          <h3>${a.title}</h3>
+          <div class="gdate">${formatActivityDate(a.date)}</div>
+          <p>${a.description || ''}</p>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    statusEl.textContent = 'Could not load activities right now.';
+  }
+}
+loadPublicGallery();
+
+/* ---------------------------------------------------------------------
+   ACTIVITIES — officer management (list, add, edit, delete)
+   --------------------------------------------------------------------- */
+let allActivities = [];
+
+async function loadActivitiesAdmin() {
+  const list = document.getElementById('activities-admin-list');
+  list.innerHTML = '<p class="hint"><span class="spinner"></span>Loading…</p>';
+  try {
+    const data = await jsonp({ action: 'activities' });
+    allActivities = data.activities || [];
+    if (allActivities.length === 0) {
+      list.innerHTML = '<p class="hint">Nothing posted yet.</p>';
+      return;
+    }
+    list.innerHTML = allActivities.map(a => `
+      <div class="activity-row">
+        ${a.photoUrl ? `<img class="athumb" src="${a.photoUrl}" alt="">` : `<div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-soft)">—</div>`}
+        <div class="ainfo">
+          <div class="atitle">${a.title}</div>
+          <div class="hint" style="margin:0">${formatActivityDate(a.date)} · ${a.category}</div>
+        </div>
+        <div class="aactions">
+          <button class="btn btn-sm" data-edit-activity="${a.activityId}">Edit</button>
+          <button class="btn btn-sm btn-danger" data-delete-activity="${a.activityId}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-edit-activity]').forEach(btn => {
+      btn.addEventListener('click', () => openActivityForm(btn.dataset.editActivity));
+    });
+    list.querySelectorAll('[data-delete-activity]').forEach(btn => {
+      btn.addEventListener('click', () => deleteActivityConfirm(btn.dataset.deleteActivity));
+    });
+  } catch (err) {
+    list.innerHTML = `<p class="hint">${err.message}</p>`;
+  }
+}
+
+function openActivityForm(activityId) {
+  const a = activityId ? allActivities.find(x => x.activityId === activityId) : null;
+  document.getElementById('activity-id').value = a ? a.activityId : '';
+  document.getElementById('activity-title').value = a ? a.title : '';
+  document.getElementById('activity-date').value = a ? a.date : '';
+  document.getElementById('activity-category').value = a ? a.category : 'Activity';
+  document.getElementById('activity-photourl').value = a ? a.photoUrl : '';
+  document.getElementById('activity-description').value = a ? a.description : '';
+  document.getElementById('activity-form-title').lastChild.textContent = a ? 'Edit Activity' : 'Post an Activity';
+  document.getElementById('activity-form-msg').textContent = '';
+  document.getElementById('activity-form-card').style.display = 'block';
+}
+document.getElementById('activity-new-btn').addEventListener('click', () => openActivityForm(null));
+document.getElementById('activity-cancel-btn').addEventListener('click', () => {
+  document.getElementById('activity-form-card').style.display = 'none';
+});
+document.getElementById('activity-save-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('activity-form-msg');
+  const title = document.getElementById('activity-title').value.trim();
+  if (!title) { msg.textContent = 'Title is required.'; return; }
+  const id = document.getElementById('activity-id').value;
+  const payload = {
+    title,
+    date: document.getElementById('activity-date').value,
+    category: document.getElementById('activity-category').value,
+    photoUrl: document.getElementById('activity-photourl').value.trim(),
+    description: document.getElementById('activity-description').value.trim()
+  };
+  msg.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    const result = id
+      ? await postAction({ action: 'updateActivity', activityId: id, fields: payload })
+      : await postAction({ action: 'addActivity', activity: payload });
+    if (result.error) { msg.textContent = result.error; return; }
+    msg.textContent = 'Saved.';
+    await loadActivitiesAdmin();
+    await loadPublicGallery();
+    setTimeout(() => { document.getElementById('activity-form-card').style.display = 'none'; }, 500);
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+async function deleteActivityConfirm(activityId) {
+  const a = allActivities.find(x => x.activityId === activityId);
+  if (!confirm(`Delete "${a ? a.title : activityId}"? This can't be undone.`)) return;
+  try {
+    const result = await postAction({ action: 'deleteActivity', activityId });
+    if (result.error) { alert(result.error); return; }
+    await loadActivitiesAdmin();
+    await loadPublicGallery();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+/* ---------------------------------------------------------------------
    ADMIN DASHBOARD
    --------------------------------------------------------------------- */
 let fullRoster = [];
@@ -956,9 +1178,11 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
     btn.setAttribute('aria-selected', 'true');
     document.querySelectorAll('.admin-sub').forEach(s => s.style.display = 'none');
     document.getElementById('edit-member-card').style.display = 'none';
+    document.getElementById('activity-form-card').style.display = 'none';
     document.getElementById('sub-' + btn.dataset.sub).style.display = 'block';
     if (btn.dataset.sub === 'rollcall') renderRollCallTable();
     if (btn.dataset.sub === 'dues') renderDuesMemberList();
+    if (btn.dataset.sub === 'activities') loadActivitiesAdmin();
   });
 });
 
