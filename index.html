@@ -291,16 +291,40 @@
     .gallery-card{ opacity:1; transform:none; animation:none; transition:none; }
   }
 
-  .gallery-photo-wrap{position:relative; overflow:hidden; height:170px}
+  .gallery-photo-wrap{position:relative; overflow:hidden; height:170px; background:var(--paper-dim)}
   .gallery-photo{
-    width:100%; height:170px; object-fit:cover; background:var(--paper-dim); display:block;
-    transition:transform .5s ease;
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0; transition:opacity .8s ease, transform .6s ease; display:block;
   }
-  .gallery-card:hover .gallery-photo{ transform:scale(1.07); }
+  .gallery-photo.active{ opacity:1; z-index:1; }
+  .gallery-card:hover .gallery-photo.active{ transform:scale(1.07); }
   .gallery-photo-fallback{
     width:100%; height:170px; display:flex; align-items:center; justify-content:center;
     background:linear-gradient(135deg, var(--green), var(--green-deep)); color:var(--gold-bright);
   }
+
+  .gcarousel-btn{
+    position:absolute; top:50%; transform:translateY(-50%); z-index:2;
+    width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;
+    background:rgba(12,15,10,.45); color:#fff; display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity .2s ease, background .2s ease;
+  }
+  .gcarousel-btn:hover{ background:rgba(12,15,10,.75); }
+  .gcarousel-btn.prev{ left:8px; }
+  .gcarousel-btn.next{ right:8px; }
+  .gallery-photo-wrap:hover .gcarousel-btn{ opacity:1; }
+  .gcarousel-btn svg{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2.5 }
+
+  .gcarousel-dots{
+    position:absolute; bottom:8px; left:0; right:0; z-index:2;
+    display:flex; justify-content:center; gap:6px;
+  }
+  .gcarousel-dots .gdot{
+    width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.55);
+    border:none; cursor:pointer; padding:0; transition:background .2s ease, transform .2s ease;
+  }
+  .gcarousel-dots .gdot.active{ background:#fff; transform:scale(1.3); }
+
   .gallery-body{padding:16px}
   .gallery-body .cat-badge{
     display:inline-block; font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase;
@@ -312,6 +336,16 @@
   .gallery-body p{margin:0; font-size:15px; color:var(--text)}
   .gallery-empty{text-align:center; color:var(--text-soft); padding:40px 20px}
 
+  .filter-pills{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 4px}
+  .filter-pill{
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600; padding:7px 16px;
+    border-radius:20px; border:1.5px solid var(--paper-dim); background:#fff; color:var(--text-soft);
+    cursor:pointer; transition:all .2s ease;
+  }
+  .filter-pill:hover{ border-color:var(--gold-deep); color:var(--text) }
+  .filter-pill.active{ background:var(--green); border-color:var(--green); color:#fff }
+
+  .photo-preview-thumb{ width:64px; height:64px; border-radius:8px; object-fit:cover; border:1px solid var(--paper-dim) }
   .activity-row{display:flex; align-items:center; gap:12px; padding:12px 6px; border-bottom:1px solid var(--paper-dim)}
   .activity-row:last-child{border-bottom:none}
   .activity-row .athumb{width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper-dim); flex-shrink:0}
@@ -492,6 +526,12 @@
       <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Accomplishments &amp; Activities</h2>
       <p class="hint" style="margin-top:-6px">A running record of the Lodge's events, projects, and milestones.</p>
       <div id="gallery-status" class="hint"><span class="spinner"></span>Loading…</div>
+      <div class="filter-pills" id="gallery-filters" style="display:none">
+        <button class="filter-pill active" data-filter="">All</button>
+        <button class="filter-pill" data-filter="Accomplishment">Accomplishment</button>
+        <button class="filter-pill" data-filter="Activity">Activity</button>
+        <button class="filter-pill" data-filter="Event">Event</button>
+      </div>
       <div class="gallery-grid" id="gallery-grid"></div>
     </div>
   </section>
@@ -707,10 +747,12 @@
               <option>Activity</option><option>Accomplishment</option><option>Event</option>
             </select>
           </div>
-          <div><label class="hint">Photo URL <span style="font-weight:400">(Google Drive uc?id=, Imgur, etc.)</span></label><input type="url" id="activity-photourl" placeholder="https://…"></div>
         </div>
         <label class="hint" style="display:block;margin-top:14px">Description</label>
         <textarea id="activity-description" rows="4" style="width:100%;padding:13px 16px;border:1.5px solid var(--paper-dim);border-radius:10px;font-size:16px;background:var(--paper);font-family:'EB Garamond',serif"></textarea>
+        <label class="hint" style="display:block;margin-top:14px">Photo URLs <span style="font-weight:400">— one per line. Paste as many as you like (Imgur i.imgur.com/....jpg, or Google Drive uc?id= links). The gallery will show them as a slideshow.</span></label>
+        <textarea id="activity-photourls" rows="4" placeholder="https://i.imgur.com/abc123.jpg&#10;https://i.imgur.com/def456.jpg" style="width:100%;padding:13px 16px;border:1.5px solid var(--paper-dim);border-radius:10px;font-size:15px;background:var(--paper);font-family:'Inter',sans-serif"></textarea>
+        <div id="activity-photo-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
         <div class="search-row" style="margin-top:16px">
           <button class="btn" id="activity-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save</span></button>
           <button class="btn" id="activity-cancel-btn" style="background:#8a8368">Cancel</button>
@@ -919,17 +961,8 @@ async function loadCelebrants() {
 loadCelebrants();
 
 /* ---------------------------------------------------------------------
-   ACCOMPLISHMENTS & ACTIVITIES — public gallery
+   ACCOMPLISHMENTS & ACTIVITIES — public gallery (multi-photo carousel)
    --------------------------------------------------------------------- */
-function activityPhotoBlock(a) {
-  if (a.photoUrl) {
-    return `<div class="gallery-photo-wrap">` +
-           `<img class="gallery-photo" src="${a.photoUrl}" alt="${a.title}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
-           `<div class="gallery-photo-fallback" style="display:none">${galleryFallbackIcon()}</div>` +
-           `</div>`;
-  }
-  return `<div class="gallery-photo-wrap"><div class="gallery-photo-fallback">${galleryFallbackIcon()}</div></div>`;
-}
 function galleryFallbackIcon() {
   return `<svg viewBox="0 0 24 24" style="width:40px;height:40px;stroke:currentColor;fill:none;stroke-width:1.5"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>`;
 }
@@ -940,28 +973,106 @@ function formatActivityDate(dateStr) {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+// Builds the photo area for one card: a crossfading carousel if there are
+// multiple photos, a single static image if there's one, or the fallback
+// icon if there are none. cardIndex is used to build unique element IDs.
+function activityPhotoBlock(a, cardIndex) {
+  const photos = (a.photoUrls && a.photoUrls.length) ? a.photoUrls : (a.photoUrl ? [a.photoUrl] : []);
+  if (photos.length === 0) {
+    return `<div class="gallery-photo-wrap"><div class="gallery-photo-fallback">${galleryFallbackIcon()}</div></div>`;
+  }
+  const imgs = photos.map((url, i) => `
+    <img class="gallery-photo${i === 0 ? ' active' : ''}" data-i="${i}" src="${url}" alt="${a.title}"
+      onerror="this.style.display='none'">
+  `).join('');
+  const controls = photos.length > 1 ? `
+    <button class="gcarousel-btn prev" type="button" aria-label="Previous photo">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="gcarousel-btn next" type="button" aria-label="Next photo">
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <div class="gcarousel-dots">
+      ${photos.map((_, i) => `<button class="gdot${i === 0 ? ' active' : ''}" type="button" data-i="${i}" aria-label="Photo ${i + 1}"></button>`).join('')}
+    </div>
+  ` : '';
+  return `<div class="gallery-photo-wrap" id="gcarousel-${cardIndex}" data-count="${photos.length}">${imgs}${controls}</div>`;
+}
+
+let galleryIntervals = [];
+function clearGalleryIntervals() {
+  galleryIntervals.forEach(id => clearInterval(id));
+  galleryIntervals = [];
+}
+
+function wireCarousels() {
+  clearGalleryIntervals();
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('.gallery-photo-wrap').forEach(wrap => {
+    const count = parseInt(wrap.dataset.count || '0', 10);
+    if (count < 2) return;
+    let idx = 0;
+    const imgs = wrap.querySelectorAll('.gallery-photo');
+    const dots = wrap.querySelectorAll('.gdot');
+    const show = (n) => {
+      idx = (n + count) % count;
+      imgs.forEach(img => img.classList.toggle('active', parseInt(img.dataset.i, 10) === idx));
+      dots.forEach(dot => dot.classList.toggle('active', parseInt(dot.dataset.i, 10) === idx));
+    };
+    wrap.querySelector('.prev').addEventListener('click', () => show(idx - 1));
+    wrap.querySelector('.next').addEventListener('click', () => show(idx + 1));
+    dots.forEach(dot => dot.addEventListener('click', () => show(parseInt(dot.dataset.i, 10))));
+    if (!reduceMotion) {
+      galleryIntervals.push(setInterval(() => show(idx + 1), 4200));
+    }
+  });
+}
+
+let publicActivities = [];
+let activeGalleryFilter = '';
+
+function renderGalleryGrid() {
+  const grid = document.getElementById('gallery-grid');
+  const filtered = activeGalleryFilter
+    ? publicActivities.filter(a => (a.category || 'Activity') === activeGalleryFilter)
+    : publicActivities;
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="gallery-empty">Nothing here yet.</div>`;
+    clearGalleryIntervals();
+    return;
+  }
+  grid.innerHTML = filtered.map((a, i) => `
+    <div class="gallery-card" data-cat="${a.category || 'Activity'}" style="animation-delay:${Math.min(i * 80, 600)}ms">
+      ${activityPhotoBlock(a, i)}
+      <div class="gallery-body">
+        <span class="cat-badge">${a.category || 'Activity'}</span>
+        <h3>${a.title}</h3>
+        <div class="gdate">${formatActivityDate(a.date)}</div>
+        <p>${a.description || ''}</p>
+      </div>
+    </div>
+  `).join('');
+  wireCarousels();
+}
+
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    activeGalleryFilter = pill.dataset.filter;
+    renderGalleryGrid();
+  });
+});
+
 async function loadPublicGallery() {
   const statusEl = document.getElementById('gallery-status');
-  const grid = document.getElementById('gallery-grid');
+  const filters = document.getElementById('gallery-filters');
   try {
     const data = await jsonp({ action: 'activities' });
-    const activities = data.activities || [];
+    publicActivities = data.activities || [];
     statusEl.style.display = 'none';
-    if (activities.length === 0) {
-      grid.innerHTML = `<div class="gallery-empty">Nothing posted yet — check back soon.</div>`;
-      return;
-    }
-    grid.innerHTML = activities.map((a, i) => `
-      <div class="gallery-card" data-cat="${a.category || 'Activity'}" style="animation-delay:${Math.min(i * 80, 600)}ms">
-        ${activityPhotoBlock(a)}
-        <div class="gallery-body">
-          <span class="cat-badge">${a.category || 'Activity'}</span>
-          <h3>${a.title}</h3>
-          <div class="gdate">${formatActivityDate(a.date)}</div>
-          <p>${a.description || ''}</p>
-        </div>
-      </div>
-    `).join('');
+    if (publicActivities.length > 0) filters.style.display = 'flex';
+    renderGalleryGrid();
   } catch (err) {
     statusEl.textContent = 'Could not load activities right now.';
   }
@@ -985,9 +1096,9 @@ async function loadActivitiesAdmin() {
     }
     list.innerHTML = allActivities.map(a => `
       <div class="activity-row">
-        ${a.photoUrl ? `<img class="athumb" src="${a.photoUrl}" alt="">` : `<div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-soft)">—</div>`}
+        ${(a.photoUrls && a.photoUrls[0]) ? `<img class="athumb" src="${a.photoUrls[0]}" alt="">` : `<div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-soft)">—</div>`}
         <div class="ainfo">
-          <div class="atitle">${a.title}</div>
+          <div class="atitle">${a.title}${a.photoUrls && a.photoUrls.length > 1 ? ` <span class="hint" style="display:inline">(${a.photoUrls.length} photos)</span>` : ''}</div>
           <div class="hint" style="margin:0">${formatActivityDate(a.date)} · ${a.category}</div>
         </div>
         <div class="aactions">
@@ -1007,16 +1118,24 @@ async function loadActivitiesAdmin() {
   }
 }
 
+function renderActivityPhotoPreview() {
+  const urls = document.getElementById('activity-photourls').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const preview = document.getElementById('activity-photo-preview');
+  preview.innerHTML = urls.map(u => `<img class="photo-preview-thumb" src="${u}" onerror="this.style.opacity='.25'">`).join('');
+}
+document.getElementById('activity-photourls').addEventListener('input', renderActivityPhotoPreview);
+
 function openActivityForm(activityId) {
   const a = activityId ? allActivities.find(x => x.activityId === activityId) : null;
   document.getElementById('activity-id').value = a ? a.activityId : '';
   document.getElementById('activity-title').value = a ? a.title : '';
   document.getElementById('activity-date').value = a ? a.date : '';
   document.getElementById('activity-category').value = a ? a.category : 'Activity';
-  document.getElementById('activity-photourl').value = a ? a.photoUrl : '';
+  document.getElementById('activity-photourls').value = a && a.photoUrls ? a.photoUrls.join('\n') : '';
   document.getElementById('activity-description').value = a ? a.description : '';
   document.getElementById('activity-form-title').lastChild.textContent = a ? 'Edit Activity' : 'Post an Activity';
   document.getElementById('activity-form-msg').textContent = '';
+  renderActivityPhotoPreview();
   document.getElementById('activity-form-card').style.display = 'block';
 }
 document.getElementById('activity-new-btn').addEventListener('click', () => openActivityForm(null));
@@ -1028,11 +1147,12 @@ document.getElementById('activity-save-btn').addEventListener('click', async () 
   const title = document.getElementById('activity-title').value.trim();
   if (!title) { msg.textContent = 'Title is required.'; return; }
   const id = document.getElementById('activity-id').value;
+  const photoUrls = document.getElementById('activity-photourls').value.split('\n').map(s => s.trim()).filter(Boolean);
   const payload = {
     title,
     date: document.getElementById('activity-date').value,
     category: document.getElementById('activity-category').value,
-    photoUrl: document.getElementById('activity-photourl').value.trim(),
+    photoUrls,
     description: document.getElementById('activity-description').value.trim()
   };
   msg.innerHTML = '<span class="spinner"></span>Saving…';
