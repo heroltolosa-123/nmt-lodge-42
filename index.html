@@ -263,6 +263,7 @@
     font-family:'Cinzel',serif; font-size:38px;
   }
   .avatar-sm{width:40px; height:40px; border-width:2px; font-size:14px}
+  .avatar-md{width:88px; height:88px; border-width:3px; font-size:26px}
   .celebrant-item{display:flex; align-items:center; gap:14px; padding:10px 6px; border-bottom:1px solid var(--paper-dim)}
   .celebrant-item:last-child{border-bottom:none}
   .celebrant-day{
@@ -350,6 +351,51 @@
   .filter-pill.active{ background:var(--green); border-color:var(--green); color:#fff }
 
   .photo-preview-thumb{ width:64px; height:64px; border-radius:8px; object-fit:cover; border:1px solid var(--paper-dim) }
+
+  /* ---------- LODGE OFFICERS ---------- */
+  .officer-section-title{
+    font-family:'Cinzel',serif; font-size:15px; color:var(--green); text-transform:uppercase;
+    letter-spacing:.05em; margin:24px 0 4px; padding-bottom:6px; border-bottom:2px solid var(--paper-dim);
+  }
+  .officer-section-title:first-child{ margin-top:14px }
+  .officer-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px; margin-top:14px}
+  .officer-card{
+    text-align:center; padding:18px 10px; border:1px solid var(--paper-dim); border-radius:12px;
+    background:var(--paper); transition:transform .2s ease, box-shadow .2s ease, background .2s ease;
+    opacity:0; transform:translateY(10px); animation:card-in .5s ease forwards;
+  }
+  .officer-card:hover{ transform:translateY(-4px); box-shadow:0 10px 20px rgba(0,0,0,.08); background:#fff; }
+  .officer-card .avatar, .officer-card .avatar-fallback{ margin:0 auto 10px; }
+  .officer-card .oname{ font-family:'Inter',sans-serif; font-weight:600; font-size:14px }
+  .officer-card .oposition{
+    font-family:'Cinzel',serif; font-size:11.5px; color:var(--gold-deep); text-transform:uppercase;
+    letter-spacing:.04em; margin-top:3px;
+  }
+  @media (prefers-reduced-motion: reduce){ .officer-card{ opacity:1; transform:none; animation:none; } }
+
+  .past-officer-row{
+    display:flex; justify-content:space-between; padding:9px 8px;
+    border-bottom:1px solid var(--paper-dim); font-family:'Inter',sans-serif; font-size:14px;
+  }
+  .past-officer-row:last-child{ border-bottom:none }
+  .past-officer-row .ppos{ color:var(--text-soft) }
+
+  /* ---------- BULLETIN BOARD ---------- */
+  .bulletin-card{
+    background:#fff; border:1px solid var(--paper-dim); border-radius:12px; padding:18px 20px; margin-top:14px;
+    border-left:4px solid var(--green);
+    opacity:0; transform:translateY(10px); animation:card-in .45s ease forwards;
+  }
+  .bulletin-card.pinned{ border-left-color:var(--gold); background:#fffdf5; }
+  .bulletin-card .bhead{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+  .bulletin-card .pin-badge{
+    display:inline-flex; align-items:center; gap:4px; font-family:'Inter',sans-serif; font-size:11px;
+    font-weight:700; text-transform:uppercase; color:var(--gold-deep); background:var(--paper); padding:2px 9px; border-radius:12px;
+  }
+  .bulletin-card h3{ margin:6px 0 2px; font-size:18px }
+  .bulletin-card .bdate{ font-family:'Inter',sans-serif; font-size:12px; color:var(--text-soft); margin-bottom:10px }
+  .bulletin-card p{ margin:0; white-space:pre-wrap }
+  @media (prefers-reduced-motion: reduce){ .bulletin-card{ opacity:1; transform:none; animation:none; } }
   .activity-row{display:flex; align-items:center; gap:12px; padding:12px 6px; border-bottom:1px solid var(--paper-dim)}
   .activity-row:last-child{border-bottom:none}
   .activity-row .athumb{width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper-dim); flex-shrink:0}
@@ -491,6 +537,12 @@
   <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="activities">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Accomplishments &amp; Activities</span>
   </button>
+  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="officers">
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Lodge Officers</span>
+  </button>
+  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="bulletin">
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin Board</span>
+  </button>
   <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="admin">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6z"/></svg>Officers' Dashboard</span>
   </button>
@@ -540,6 +592,34 @@
     </div>
   </section>
 
+  <!-- ===================== LODGE OFFICERS (public) ===================== -->
+  <section id="panel-officers" class="panel">
+    <div class="card">
+      <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Lodge Officers</h2>
+      <p class="hint" style="margin-top:-6px">The current officer line, and a look back at past terms.</p>
+      <div id="officers-status" class="hint"><span class="spinner"></span>Loading…</div>
+      <div id="officers-current"></div>
+
+      <div id="past-officers-block" style="display:none; margin-top:32px">
+        <h3 style="font-family:'Cinzel',serif; color:var(--ink); font-size:18px; border-top:1px solid var(--paper-dim); padding-top:24px">Past Officers</h3>
+        <div class="search-row" style="max-width:280px">
+          <select id="past-term-select"></select>
+        </div>
+        <div id="past-officers-list" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BULLETIN BOARD (public) ===================== -->
+  <section id="panel-bulletin" class="panel">
+    <div class="card">
+      <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin Board</h2>
+      <p class="hint" style="margin-top:-6px">Announcements and notices from the Lodge secretary.</p>
+      <div id="bulletin-status" class="hint"><span class="spinner"></span>Loading…</div>
+      <div id="bulletin-list"></div>
+    </div>
+  </section>
+
   <!-- ===================== ADMIN ===================== -->
   <section id="panel-admin" class="panel">
     <div class="card lock-card" id="admin-lock">
@@ -574,6 +654,12 @@
         </button>
         <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="activities">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Activities</span>
+        </button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="officers">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Officers</span>
+        </button>
+        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="bulletin">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin</span>
         </button>
       </div>
 
@@ -762,6 +848,69 @@
           <button class="btn" id="activity-cancel-btn" style="background:#8a8368">Cancel</button>
         </div>
         <div id="activity-form-msg" class="hint"></div>
+      </div>
+
+      <!-- OFFICERS MANAGEMENT -->
+      <div class="card admin-sub" id="sub-officers" style="display:none">
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Officer Roster</h2>
+        <p class="hint" style="margin-top:-6px">Mark someone "Past" when a new term begins — their record stays in history under that term.</p>
+        <div class="search-row">
+          <button class="btn" id="officer-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Officer</span></button>
+        </div>
+        <div id="officers-admin-list"></div>
+      </div>
+
+      <div class="card" id="officer-form-card" style="display:none">
+        <h2 style="margin-top:0" id="officer-form-title"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Add Officer</h2>
+        <input type="hidden" id="officer-id">
+        <div class="grid-2">
+          <div><label class="hint">Full Name</label><input type="text" id="officer-name" placeholder="e.g. Juan D. Cruz"></div>
+          <div><label class="hint">Position</label><select id="officer-position"></select></div>
+          <div><label class="hint">Term <span style="font-weight:400">(e.g. 2025-2026)</span></label><input type="text" id="officer-term" placeholder="2025-2026"></div>
+          <div><label class="hint">Status</label>
+            <select id="officer-status"><option>Current</option><option>Past</option></select>
+          </div>
+        </div>
+        <label class="hint" style="display:block;margin-top:14px">Photo URL <span style="font-weight:400">(Imgur i.imgur.com/....jpg, or Google Drive uc?id= link)</span></label>
+        <input type="url" id="officer-photourl" placeholder="https://…" style="width:100%">
+        <label class="hint" style="display:block;margin-top:14px">Notes <span style="font-weight:400">(optional)</span></label>
+        <input type="text" id="officer-notes" style="width:100%">
+        <div class="search-row" style="margin-top:16px">
+          <button class="btn" id="officer-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save</span></button>
+          <button class="btn" id="officer-cancel-btn" style="background:#8a8368">Cancel</button>
+        </div>
+        <div id="officer-form-msg" class="hint"></div>
+      </div>
+
+      <!-- BULLETIN MANAGEMENT -->
+      <div class="card admin-sub" id="sub-bulletin" style="display:none">
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin Board</h2>
+        <p class="hint" style="margin-top:-6px">Everything here shows up publicly under "Bulletin Board." Pinned items always appear first.</p>
+        <div class="search-row">
+          <button class="btn" id="announcement-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post Announcement</span></button>
+        </div>
+        <div id="bulletin-admin-list"></div>
+      </div>
+
+      <div class="card" id="announcement-form-card" style="display:none">
+        <h2 style="margin-top:0" id="announcement-form-title"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Post Announcement</h2>
+        <input type="hidden" id="announcement-id">
+        <div class="grid-2">
+          <div><label class="hint">Title</label><input type="text" id="announcement-title" placeholder="e.g. Stated Meeting Moved to July 20"></div>
+          <div><label class="hint">Date Posted</label><input type="date" id="announcement-date"></div>
+          <div><label class="hint">Expiry Date <span style="font-weight:400">(optional — auto-hides after this date)</span></label><input type="date" id="announcement-expiry"></div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:22px">
+            <input type="checkbox" id="announcement-pinned" style="width:18px;height:18px">
+            <label for="announcement-pinned" class="hint" style="margin:0">Pin to top</label>
+          </div>
+        </div>
+        <label class="hint" style="display:block;margin-top:14px">Message</label>
+        <textarea id="announcement-message" rows="5" style="width:100%;padding:13px 16px;border:1.5px solid var(--paper-dim);border-radius:10px;font-size:16px;background:var(--paper);font-family:'EB Garamond',serif"></textarea>
+        <div class="search-row" style="margin-top:16px">
+          <button class="btn" id="announcement-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save</span></button>
+          <button class="btn" id="announcement-cancel-btn" style="background:#8a8368">Cancel</button>
+        </div>
+        <div id="announcement-form-msg" class="hint"></div>
       </div>
     </div>
   </section>
@@ -1084,6 +1233,110 @@ async function loadPublicGallery() {
 loadPublicGallery();
 
 /* ---------------------------------------------------------------------
+   LODGE OFFICERS — public directory (current line + past terms)
+   --------------------------------------------------------------------- */
+const OFFICER_CATEGORIES = [
+  { title: 'Elected Officers', positions: ['Worshipful Master', 'Senior Warden', 'Junior Warden', 'Treasurer', 'Secretary'] },
+  { title: 'Appointed Officers', positions: ['Senior Deacon', 'Junior Deacon', 'Chaplain', 'Marshal', 'Senior Steward', 'Junior Steward', 'Tyler'] },
+  { title: 'Other Officers', positions: ['Historian', 'Lecturer', 'Orator', 'Almoner', 'Organist', 'Pursuivant', 'Director of Ceremonies', 'Auditor', 'Charity Committee Chairman', 'Education Officer'] }
+];
+let pastOfficersData = [];
+
+function officerCardHtml(o, i) {
+  return `
+    <div class="officer-card" style="animation-delay:${Math.min(i * 60, 480)}ms">
+      ${avatarHtml({ fullName: o.fullName, photoUrl: o.photoUrl }, 'avatar-md')}
+      <div class="oname">${o.fullName}</div>
+      <div class="oposition">${o.position}</div>
+    </div>
+  `;
+}
+
+async function loadPublicOfficers() {
+  const statusEl = document.getElementById('officers-status');
+  const currentEl = document.getElementById('officers-current');
+  try {
+    const data = await jsonp({ action: 'officers' });
+    statusEl.style.display = 'none';
+    const current = data.current || [];
+    if (current.length === 0) {
+      currentEl.innerHTML = `<p class="hint">The current officer line hasn't been posted yet.</p>`;
+    } else {
+      let html = '';
+      OFFICER_CATEGORIES.forEach(cat => {
+        const members = current.filter(o => cat.positions.includes(o.position));
+        if (members.length === 0) return;
+        html += `<div class="officer-section-title">${cat.title}</div><div class="officer-grid">${members.map((o, i) => officerCardHtml(o, i)).join('')}</div>`;
+      });
+      // catch any position not in the known lists, so nothing silently disappears
+      const known = OFFICER_CATEGORIES.flatMap(c => c.positions);
+      const other = current.filter(o => !known.includes(o.position));
+      if (other.length > 0) {
+        html += `<div class="officer-section-title">Other</div><div class="officer-grid">${other.map((o, i) => officerCardHtml(o, i)).join('')}</div>`;
+      }
+      currentEl.innerHTML = html;
+    }
+
+    pastOfficersData = data.past || [];
+    const termSelect = document.getElementById('past-term-select');
+    const block = document.getElementById('past-officers-block');
+    if (data.terms && data.terms.length > 0) {
+      block.style.display = 'block';
+      termSelect.innerHTML = data.terms.map(t => `<option value="${t}">${t}</option>`).join('');
+      renderPastOfficers(data.terms[0]);
+      termSelect.addEventListener('change', () => renderPastOfficers(termSelect.value));
+    }
+  } catch (err) {
+    statusEl.textContent = 'Could not load the officer line right now.';
+  }
+}
+function renderPastOfficers(term) {
+  const list = document.getElementById('past-officers-list');
+  const rows = pastOfficersData
+    .filter(o => o.term === term)
+    .sort((a, b) => (OFFICER_CATEGORIES.flatMap(c => c.positions).indexOf(a.position)) - (OFFICER_CATEGORIES.flatMap(c => c.positions).indexOf(b.position)));
+  if (rows.length === 0) { list.innerHTML = `<p class="hint">No officers recorded for ${term}.</p>`; return; }
+  list.innerHTML = rows.map(o => `<div class="past-officer-row"><span>${o.fullName}</span><span class="ppos">${o.position}</span></div>`).join('');
+}
+loadPublicOfficers();
+
+/* ---------------------------------------------------------------------
+   BULLETIN BOARD — public announcements
+   --------------------------------------------------------------------- */
+function formatBulletinDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+async function loadPublicBulletin() {
+  const statusEl = document.getElementById('bulletin-status');
+  const list = document.getElementById('bulletin-list');
+  try {
+    const data = await jsonp({ action: 'bulletin' });
+    statusEl.style.display = 'none';
+    const items = data.announcements || [];
+    if (items.length === 0) {
+      list.innerHTML = `<p class="hint">No announcements posted right now.</p>`;
+      return;
+    }
+    list.innerHTML = items.map((a, i) => `
+      <div class="bulletin-card${a.pinned ? ' pinned' : ''}" style="animation-delay:${Math.min(i * 60, 480)}ms">
+        <div class="bhead">
+          ${a.pinned ? `<span class="pin-badge"><svg class="icon" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 17v5M8 3h8l-1 7 3 3H6l3-3z"/></svg>Pinned</span>` : ''}
+        </div>
+        <h3>${a.title}</h3>
+        <div class="bdate">${formatBulletinDate(a.datePosted)}</div>
+        <p>${a.message || ''}</p>
+      </div>
+    `).join('');
+  } catch (err) {
+    statusEl.textContent = 'Could not load the bulletin board right now.';
+  }
+}
+loadPublicBulletin();
+
+/* ---------------------------------------------------------------------
    ACTIVITIES — officer management (list, add, edit, delete)
    --------------------------------------------------------------------- */
 let allActivities = [];
@@ -1182,6 +1435,201 @@ async function deleteActivityConfirm(activityId) {
     if (result.error) { alert(result.error); return; }
     await loadActivitiesAdmin();
     await loadPublicGallery();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   OFFICERS — officer management (list, add, edit, delete)
+   --------------------------------------------------------------------- */
+const ALL_OFFICER_POSITIONS = OFFICER_CATEGORIES.flatMap(c => c.positions);
+document.getElementById('officer-position').innerHTML = ALL_OFFICER_POSITIONS.map(p => `<option>${p}</option>`).join('');
+
+let allOfficers = [];
+
+async function loadOfficersAdmin() {
+  const list = document.getElementById('officers-admin-list');
+  list.innerHTML = '<p class="hint"><span class="spinner"></span>Loading…</p>';
+  try {
+    const data = await jsonp({ action: 'officers' });
+    allOfficers = [...(data.current || []), ...(data.past || [])];
+    if (allOfficers.length === 0) {
+      list.innerHTML = '<p class="hint">No officers on record yet.</p>';
+      return;
+    }
+    list.innerHTML = allOfficers.map(o => `
+      <div class="activity-row">
+        ${o.photoUrl ? `<img class="athumb" src="${o.photoUrl}" alt="">` : `<div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-soft)">—</div>`}
+        <div class="ainfo">
+          <div class="atitle">${o.fullName}</div>
+          <div class="hint" style="margin:0">${o.position} · ${o.term || 'No term set'} · <span class="badge ${o.status === 'Current' ? 'ok' : 'neutral'}">${o.status}</span></div>
+        </div>
+        <div class="aactions">
+          <button class="btn btn-sm" data-edit-officer="${o.officerId}">Edit</button>
+          <button class="btn btn-sm btn-danger" data-delete-officer="${o.officerId}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-edit-officer]').forEach(btn => {
+      btn.addEventListener('click', () => openOfficerForm(btn.dataset.editOfficer));
+    });
+    list.querySelectorAll('[data-delete-officer]').forEach(btn => {
+      btn.addEventListener('click', () => deleteOfficerConfirm(btn.dataset.deleteOfficer));
+    });
+  } catch (err) {
+    list.innerHTML = `<p class="hint">${err.message}</p>`;
+  }
+}
+
+function openOfficerForm(officerId) {
+  const o = officerId ? allOfficers.find(x => x.officerId === officerId) : null;
+  document.getElementById('officer-id').value = o ? o.officerId : '';
+  document.getElementById('officer-name').value = o ? o.fullName : '';
+  document.getElementById('officer-position').value = o ? o.position : ALL_OFFICER_POSITIONS[0];
+  document.getElementById('officer-term').value = o ? o.term : '';
+  document.getElementById('officer-status').value = o ? o.status : 'Current';
+  document.getElementById('officer-photourl').value = o ? o.photoUrl : '';
+  document.getElementById('officer-notes').value = o ? o.notes : '';
+  document.getElementById('officer-form-title').lastChild.textContent = o ? 'Edit Officer' : 'Add Officer';
+  document.getElementById('officer-form-msg').textContent = '';
+  document.getElementById('officer-form-card').style.display = 'block';
+}
+document.getElementById('officer-new-btn').addEventListener('click', () => openOfficerForm(null));
+document.getElementById('officer-cancel-btn').addEventListener('click', () => {
+  document.getElementById('officer-form-card').style.display = 'none';
+});
+document.getElementById('officer-save-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('officer-form-msg');
+  const fullName = document.getElementById('officer-name').value.trim();
+  if (!fullName) { msg.textContent = 'Name is required.'; return; }
+  const id = document.getElementById('officer-id').value;
+  const payload = {
+    fullName,
+    position: document.getElementById('officer-position').value,
+    term: document.getElementById('officer-term').value.trim(),
+    status: document.getElementById('officer-status').value,
+    photoUrl: document.getElementById('officer-photourl').value.trim(),
+    notes: document.getElementById('officer-notes').value.trim()
+  };
+  msg.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    const result = id
+      ? await postAction({ action: 'updateOfficer', officerId: id, fields: payload })
+      : await postAction({ action: 'addOfficer', officer: payload });
+    if (result.error) { msg.textContent = result.error; return; }
+    msg.textContent = 'Saved.';
+    await loadOfficersAdmin();
+    await loadPublicOfficers();
+    setTimeout(() => { document.getElementById('officer-form-card').style.display = 'none'; }, 500);
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+async function deleteOfficerConfirm(officerId) {
+  const o = allOfficers.find(x => x.officerId === officerId);
+  if (!confirm(`Remove "${o ? o.fullName : officerId}" from the officer roster? This can't be undone.`)) return;
+  try {
+    const result = await postAction({ action: 'deleteOfficer', officerId });
+    if (result.error) { alert(result.error); return; }
+    await loadOfficersAdmin();
+    await loadPublicOfficers();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   BULLETIN BOARD — announcement management (list, add, edit, delete)
+   --------------------------------------------------------------------- */
+let allAnnouncements = [];
+
+async function loadBulletinAdmin() {
+  const list = document.getElementById('bulletin-admin-list');
+  list.innerHTML = '<p class="hint"><span class="spinner"></span>Loading…</p>';
+  try {
+    const data = await jsonp({ action: 'bulletin' });
+    allAnnouncements = data.announcements || [];
+    if (allAnnouncements.length === 0) {
+      list.innerHTML = '<p class="hint">Nothing posted yet.</p>';
+      return;
+    }
+    list.innerHTML = allAnnouncements.map(a => `
+      <div class="activity-row">
+        <div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--gold-deep)">
+          ${a.pinned ? `<svg class="icon" viewBox="0 0 24 24"><path d="M12 17v5M8 3h8l-1 7 3 3H6l3-3z"/></svg>` : ''}
+        </div>
+        <div class="ainfo">
+          <div class="atitle">${a.title}</div>
+          <div class="hint" style="margin:0">${formatBulletinDate(a.datePosted)}${a.expiryDate ? ' · expires ' + formatBulletinDate(a.expiryDate) : ''}</div>
+        </div>
+        <div class="aactions">
+          <button class="btn btn-sm" data-edit-ann="${a.announcementId}">Edit</button>
+          <button class="btn btn-sm btn-danger" data-delete-ann="${a.announcementId}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-edit-ann]').forEach(btn => {
+      btn.addEventListener('click', () => openAnnouncementForm(btn.dataset.editAnn));
+    });
+    list.querySelectorAll('[data-delete-ann]').forEach(btn => {
+      btn.addEventListener('click', () => deleteAnnouncementConfirm(btn.dataset.deleteAnn));
+    });
+  } catch (err) {
+    list.innerHTML = `<p class="hint">${err.message}</p>`;
+  }
+}
+
+function openAnnouncementForm(announcementId) {
+  const a = announcementId ? allAnnouncements.find(x => x.announcementId === announcementId) : null;
+  document.getElementById('announcement-id').value = a ? a.announcementId : '';
+  document.getElementById('announcement-title').value = a ? a.title : '';
+  document.getElementById('announcement-date').value = a ? a.datePosted : new Date().toISOString().slice(0, 10);
+  document.getElementById('announcement-expiry').value = a ? a.expiryDate : '';
+  document.getElementById('announcement-pinned').checked = a ? a.pinned : false;
+  document.getElementById('announcement-message').value = a ? a.message : '';
+  document.getElementById('announcement-form-title').lastChild.textContent = a ? 'Edit Announcement' : 'Post Announcement';
+  document.getElementById('announcement-form-msg').textContent = '';
+  document.getElementById('announcement-form-card').style.display = 'block';
+}
+document.getElementById('announcement-new-btn').addEventListener('click', () => openAnnouncementForm(null));
+document.getElementById('announcement-cancel-btn').addEventListener('click', () => {
+  document.getElementById('announcement-form-card').style.display = 'none';
+});
+document.getElementById('announcement-save-btn').addEventListener('click', async () => {
+  const msg = document.getElementById('announcement-form-msg');
+  const title = document.getElementById('announcement-title').value.trim();
+  if (!title) { msg.textContent = 'Title is required.'; return; }
+  const id = document.getElementById('announcement-id').value;
+  const payload = {
+    title,
+    datePosted: document.getElementById('announcement-date').value,
+    expiryDate: document.getElementById('announcement-expiry').value,
+    pinned: document.getElementById('announcement-pinned').checked,
+    message: document.getElementById('announcement-message').value.trim()
+  };
+  msg.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    const result = id
+      ? await postAction({ action: 'updateAnnouncement', announcementId: id, fields: payload })
+      : await postAction({ action: 'addAnnouncement', announcement: payload });
+    if (result.error) { msg.textContent = result.error; return; }
+    msg.textContent = 'Saved.';
+    await loadBulletinAdmin();
+    await loadPublicBulletin();
+    setTimeout(() => { document.getElementById('announcement-form-card').style.display = 'none'; }, 500);
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+async function deleteAnnouncementConfirm(announcementId) {
+  const a = allAnnouncements.find(x => x.announcementId === announcementId);
+  if (!confirm(`Delete "${a ? a.title : announcementId}"? This can't be undone.`)) return;
+  try {
+    const result = await postAction({ action: 'deleteAnnouncement', announcementId });
+    if (result.error) { alert(result.error); return; }
+    await loadBulletinAdmin();
+    await loadPublicBulletin();
   } catch (err) {
     alert(err.message);
   }
@@ -1327,10 +1775,14 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
     document.querySelectorAll('.admin-sub').forEach(s => s.style.display = 'none');
     document.getElementById('edit-member-card').style.display = 'none';
     document.getElementById('activity-form-card').style.display = 'none';
+    document.getElementById('officer-form-card').style.display = 'none';
+    document.getElementById('announcement-form-card').style.display = 'none';
     document.getElementById('sub-' + btn.dataset.sub).style.display = 'block';
     if (btn.dataset.sub === 'rollcall') renderRollCallTable();
     if (btn.dataset.sub === 'dues') renderDuesMemberList();
     if (btn.dataset.sub === 'activities') loadActivitiesAdmin();
+    if (btn.dataset.sub === 'officers') loadOfficersAdmin();
+    if (btn.dataset.sub === 'bulletin') loadBulletinAdmin();
   });
 });
 
