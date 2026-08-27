@@ -24,9 +24,26 @@
     --bad:#a3312a;
     --radius:14px;
     --shadow:0 10px 30px rgba(0,0,0,.18);
+    /* layered depth: contact shadow + ambient shadow, warmed toward the paper */
+    --shadow-sm:0 1px 2px rgba(40,30,8,.05), 0 4px 12px rgba(40,30,8,.05);
+    --shadow-md:0 2px 5px rgba(40,30,8,.06), 0 14px 30px rgba(40,30,8,.09);
+    --shadow-lg:0 4px 10px rgba(40,30,8,.08), 0 28px 56px rgba(40,30,8,.15);
+    --rule:rgba(138,109,47,.30);
+    --ease-out:cubic-bezier(.16,.84,.44,1);
+    --space-1:6px; --space-2:12px; --space-3:20px; --space-4:32px; --space-5:52px;
   }
   *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
+  html{
+    scroll-behavior:smooth;
+    -webkit-text-size-adjust:100%;
+    scrollbar-color:var(--gold-deep) var(--paper-dim);
+  }
+  ::selection{ background:var(--gold-bright); color:var(--ink); }
+  ::-webkit-scrollbar{ width:12px; height:12px }
+  ::-webkit-scrollbar-track{ background:var(--paper-dim) }
+  ::-webkit-scrollbar-thumb{ background:var(--gold-deep); border:3px solid var(--paper-dim); border-radius:8px }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--gold) }
+  input, textarea, select{ caret-color:var(--gold-deep) }
   .icon{width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; vertical-align:-3px}
   .icon-lg{width:26px; height:26px}
   .btn-icon-row{display:inline-flex; align-items:center; gap:8px}
@@ -35,24 +52,29 @@
   .search-wrap .icon{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-soft); pointer-events:none; z-index:1}
   .search-wrap input[type="text"], .search-wrap input[type="password"]{padding-left:42px; width:100%}
   th .icon{margin-right:4px; color:var(--text-soft)}
-  .card h2{display:flex; align-items:center; gap:10px}
-  .card h2 .icon{color:var(--gold-deep)}
+  .card h2, .panel-head h2{display:flex; align-items:center; gap:10px}
+  .card h2 .icon, .panel-head h2 .icon{color:var(--gold-deep)}
   body{
     margin:0;
     background:var(--paper);
     color:var(--text);
     font-family:'EB Garamond', serif;
     font-size:18px;
-    line-height:1.5;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
   }
   h1,h2,h3,.display{
     font-family:'Cinzel', serif;
-    letter-spacing:.04em;
+    letter-spacing:.03em;
     font-weight:600;
     color:var(--ink);
+    text-wrap:balance;
+    line-height:1.2;
   }
+  /* numbers in data contexts line up column-to-column */
+  table, .stat .value, .stat-card .num, .ring b, .month-chip, .badge{ font-variant-numeric:tabular-nums; }
   .mono, table, input, button, .badge, .tag{ font-family:'Inter', sans-serif; }
-  a{color:inherit}
+  a{color:inherit; text-underline-offset:3px}
   button{font:inherit}
   :focus-visible{outline:3px solid var(--gold-bright); outline-offset:2px}
   @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} }
@@ -113,7 +135,7 @@
   .lodge-tag .attrib{
     display:block; margin-top:4px; font-style:normal;
     font-family:'Inter',sans-serif; font-size:11px; letter-spacing:.12em;
-    text-transform:uppercase; color:var(--gold-deep);
+    text-transform:uppercase; color:var(--gold);
   }
 
   /* ---------- HERO ANIMATED SCENE ---------- */
@@ -154,18 +176,43 @@
   }
 
   /* ---------- RIBBON NAV ---------- */
+  .nav-shell{
+    position:sticky; top:0; z-index:40;
+    margin-top:-26px; padding:0 0 4px;
+    transition:background .35s var(--ease-out), box-shadow .35s var(--ease-out);
+  }
+  .nav-shell[data-stuck="true"]{
+    padding:9px 0 10px;
+    background:linear-gradient(180deg, rgba(12,15,10,.97), rgba(12,15,10,.90));
+    -webkit-backdrop-filter:blur(14px) saturate(1.15);
+    backdrop-filter:blur(14px) saturate(1.15);
+    box-shadow:0 1px 0 var(--rule), 0 14px 30px rgba(12,15,10,.20);
+  }
   .ribbon-nav{
-    display:flex; justify-content:center; gap:14px;
+    display:flex; justify-content:center; align-items:center; gap:12px;
     flex-wrap:wrap;
     padding:0 20px;
-    margin-top:-26px;
     position:relative; z-index:2;
   }
+  .nav-shell .ribbon-nav{ flex-wrap:nowrap }
+  /* the dashboard is a staff door, not a fifth reading room — set apart */
+  .nav-div{
+    width:1px; height:26px; flex-shrink:0; margin:0 4px;
+    background:linear-gradient(180deg, transparent, var(--gold-deep), transparent);
+  }
+  .ribbon-btn-ghost{
+    background:transparent;
+    color:var(--gold-bright);
+    border-color:rgba(198,162,76,.45);
+    box-shadow:none;
+  }
+  .ribbon-btn-ghost:hover{ background:rgba(198,162,76,.12); border-color:var(--gold); }
   .ribbon-btn{
     background:var(--green);
     color:var(--paper);
     border:1px solid var(--gold-deep);
-    padding:14px 26px;
+    padding:14px 22px;
+    white-space:nowrap;
     border-radius:8px;
     font-family:'Cinzel',serif;
     font-size:14px;
@@ -173,13 +220,41 @@
     text-transform:uppercase;
     cursor:pointer;
     box-shadow:var(--shadow);
-    transition:transform .15s ease, background .15s ease;
+    transition:transform .18s var(--ease-out), background .18s var(--ease-out), color .18s var(--ease-out);
   }
   .ribbon-btn:hover{ transform:translateY(-2px); background:var(--green-deep); }
+  .ribbon-btn:active{ transform:translateY(0); }
   .ribbon-btn[aria-selected="true"]{
     background:var(--gold);
     color:var(--ink);
     border-color:var(--gold-bright);
+  }
+  /* condensed state: the bar tightens once it pins to the top */
+  .nav-shell[data-stuck="true"] .ribbon-btn{
+    padding:9px 17px; font-size:12.5px; box-shadow:none;
+  }
+  @media (max-width:1180px){
+    /* a wrapping button bar strands the last tab on its own row — scroll it */
+    .nav-shell .ribbon-nav{
+      justify-content:flex-start;
+      overflow-x:auto; overscroll-behavior-x:contain;
+      scroll-snap-type:x proximity; padding:0 16px 8px;
+      scrollbar-width:none; -ms-overflow-style:none;
+    }
+    .nav-shell .ribbon-nav::-webkit-scrollbar{ display:none }
+    .nav-shell .ribbon-btn{ flex:0 0 auto; scroll-snap-align:center; padding:12px 18px; font-size:12.5px }
+    .nav-div{ display:none }
+  }
+  @media (max-width:700px){
+    /* same treatment for the dashboard's seven sub-tabs */
+    #admin-content .ribbon-nav{
+      flex-wrap:nowrap; justify-content:flex-start;
+      overflow-x:auto; overscroll-behavior-x:contain;
+      scroll-snap-type:x proximity; padding:0 0 8px;
+      scrollbar-width:none; -ms-overflow-style:none;
+    }
+    #admin-content .ribbon-nav::-webkit-scrollbar{ display:none }
+    #admin-content .ribbon-btn{ flex:0 0 auto; scroll-snap-align:center; padding:11px 16px; font-size:12px }
   }
 
   main{max-width:960px; margin:0 auto; padding:40px 20px 80px}
@@ -190,10 +265,15 @@
     background:#fff;
     border:1px solid var(--paper-dim);
     border-radius:var(--radius);
-    padding:26px;
-    box-shadow:0 2px 10px rgba(0,0,0,.05);
+    padding:30px;
+    box-shadow:var(--shadow-sm);
   }
-  .card + .card{margin-top:18px}
+  .card + .card{margin-top:20px}
+  .card > h2:first-child{ margin-top:0 }
+  .card h2{ font-size:clamp(21px, 2.4vw, 26px) }
+  /* prose stays inside a comfortable measure even on wide screens */
+  .card > p.hint, .gallery-body p, .bulletin-card p{ max-width:68ch }
+  @media (max-width:600px){ .card{ padding:22px 18px } }
 
   /* ---------- SEARCH ---------- */
   .search-row{display:flex; gap:10px; margin-bottom:6px}
@@ -273,8 +353,8 @@
 
   /* ---------- ACTIVITIES GALLERY ---------- */
   .gallery-grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 460px));
-    justify-content:center; gap:24px; margin-top:18px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(min(330px, 100%), 1fr));
+    gap:24px; margin-top:18px;
   }
   .gallery-card{
     background:#fff; border:1px solid var(--paper-dim); border-radius:var(--radius);
@@ -354,48 +434,106 @@
 
   /* ---------- LODGE OFFICERS ---------- */
   .officer-section-title{
-    font-family:'Cinzel',serif; font-size:15px; color:var(--green); text-transform:uppercase;
-    letter-spacing:.05em; margin:24px 0 4px; padding-bottom:6px; border-bottom:2px solid var(--paper-dim);
+    display:flex; align-items:center; gap:12px;
+    font-family:'Cinzel',serif; font-size:13px; color:var(--green); text-transform:uppercase;
+    letter-spacing:.10em; margin:40px 0 0; padding:0;
   }
-  .officer-section-title:first-child{ margin-top:14px }
-  .officer-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px; margin-top:14px}
+  .officer-section-title::after{
+    content:""; flex:1; height:1px; background:linear-gradient(90deg, var(--rule), transparent);
+  }
+  .officer-section-title:first-child{ margin-top:28px }
+  .officer-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr));
+    gap:18px; margin-top:18px; list-style:none; padding:0;
+  }
+  @media (min-width:641px){
+    .officer-grid{
+      grid-template-columns:repeat(auto-fit, minmax(158px, 196px));
+      justify-content:center;
+    }
+  }
+  .line-gap{
+    margin-top:26px; padding-top:20px; border-top:1px solid var(--paper-dim);
+    color:var(--text-soft); font-size:15px; font-style:italic;
+  }
   .officer-card{
-    text-align:center; padding:18px 10px; border:1px solid var(--paper-dim); border-radius:12px;
-    background:var(--paper); transition:transform .2s ease, box-shadow .2s ease, background .2s ease;
-    opacity:0; transform:translateY(10px); animation:card-in .5s ease forwards;
+    text-align:center; padding:22px 12px 20px; border:1px solid var(--paper-dim); border-radius:12px;
+    background:var(--paper);
+    transition:transform .28s var(--ease-out), box-shadow .28s var(--ease-out), border-color .28s var(--ease-out);
+    opacity:0; transform:translateY(10px); animation:card-in .55s var(--ease-out) forwards;
   }
-  .officer-card:hover{ transform:translateY(-4px); box-shadow:0 10px 20px rgba(0,0,0,.08); background:#fff; }
-  .officer-card .avatar, .officer-card .avatar-fallback{ margin:0 auto 10px; }
-  .officer-card .oname{ font-family:'Inter',sans-serif; font-weight:600; font-size:14px }
+  .officer-card:hover{
+    transform:translateY(-5px); box-shadow:var(--shadow-md); border-color:var(--rule); background:#fff;
+  }
+  .officer-card .avatar, .officer-card .avatar-fallback{ margin:0 auto 12px; }
+  .officer-card .oname{ font-family:'Inter',sans-serif; font-weight:600; font-size:14.5px; line-height:1.3 }
   .officer-card .oposition{
-    font-family:'Cinzel',serif; font-size:11.5px; color:var(--gold-deep); text-transform:uppercase;
-    letter-spacing:.04em; margin-top:3px;
+    font-family:'Cinzel',serif; font-size:11px; color:var(--gold-deep); text-transform:uppercase;
+    letter-spacing:.09em; margin-top:5px;
   }
   @media (prefers-reduced-motion: reduce){ .officer-card{ opacity:1; transform:none; animation:none; } }
 
   .past-officer-row{
-    display:flex; justify-content:space-between; padding:9px 8px;
+    display:flex; justify-content:space-between; gap:16px; padding:11px 10px;
     border-bottom:1px solid var(--paper-dim); font-family:'Inter',sans-serif; font-size:14px;
+    transition:background .15s ease;
   }
+  .past-officer-row:hover{ background:var(--paper) }
   .past-officer-row:last-child{ border-bottom:none }
-  .past-officer-row .ppos{ color:var(--text-soft) }
+  .past-officer-row .ppos{
+    color:var(--gold-deep); font-family:'Cinzel',serif; font-size:11.5px;
+    text-transform:uppercase; letter-spacing:.07em; align-self:center; text-align:right;
+  }
 
   /* ---------- BULLETIN BOARD ---------- */
   .bulletin-card{
-    background:#fff; border:1px solid var(--paper-dim); border-radius:12px; padding:18px 20px; margin-top:14px;
-    border-left:4px solid var(--green);
-    opacity:0; transform:translateY(10px); animation:card-in .45s ease forwards;
+    position:relative;
+    background:#fff; border:1px solid var(--paper-dim); border-radius:12px;
+    padding:24px 26px; margin-top:16px;
+    box-shadow:var(--shadow-sm);
+    opacity:0; transform:translateY(10px); animation:card-in .5s var(--ease-out) forwards;
   }
-  .bulletin-card.pinned{ border-left-color:var(--gold); background:#fffdf5; }
-  .bulletin-card .bhead{ display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+  .bulletin-card.pinned{
+    border-color:var(--rule);
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgba(230,200,119,.16), transparent 62%),
+      #fffdf4;
+    box-shadow:var(--shadow-md);
+  }
+  .bulletin-card .bhead{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px }
   .bulletin-card .pin-badge{
-    display:inline-flex; align-items:center; gap:4px; font-family:'Inter',sans-serif; font-size:11px;
-    font-weight:700; text-transform:uppercase; color:var(--gold-deep); background:var(--paper); padding:2px 9px; border-radius:12px;
+    display:inline-flex; align-items:center; gap:5px; font-family:'Inter',sans-serif; font-size:10.5px;
+    font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--gold-deep);
+    background:var(--paper); border:1px solid var(--rule); padding:3px 10px; border-radius:20px;
   }
-  .bulletin-card h3{ margin:6px 0 2px; font-size:18px }
-  .bulletin-card .bdate{ font-family:'Inter',sans-serif; font-size:12px; color:var(--text-soft); margin-bottom:10px }
+  .bulletin-card h3{ margin:0 0 3px; font-size:clamp(19px,2.2vw,23px) }
+  .bulletin-card .bdate{
+    font-family:'Inter',sans-serif; font-size:11.5px; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--text-soft); margin-bottom:16px;
+  }
   .bulletin-card p{ margin:0; white-space:pre-wrap }
+  .bulletin-card p + p{ margin-top:12px }
+  /* structured detail rows parsed out of the secretary's message */
+  .b-details{
+    display:grid; gap:1px; margin:16px 0; background:var(--paper-dim);
+    border:1px solid var(--paper-dim); border-radius:10px; overflow:hidden;
+  }
+  .b-detail{
+    display:flex; gap:12px; align-items:flex-start; background:var(--paper); padding:11px 14px;
+  }
+  .bulletin-card.pinned .b-detail{ background:#fffdf4 }
+  .b-detail .icon{ color:var(--gold-deep); margin-top:4px }
+  .b-detail .bd-label{
+    font-family:'Inter',sans-serif; font-size:10.5px; font-weight:700; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--text-soft);
+  }
+  .b-detail .bd-value{ font-size:16px; white-space:pre-wrap }
+  .b-signoff{
+    margin-top:18px; padding-top:14px; border-top:1px solid var(--paper-dim);
+    font-style:italic; color:var(--text-soft); font-size:16px; white-space:pre-wrap;
+  }
   @media (prefers-reduced-motion: reduce){ .bulletin-card{ opacity:1; transform:none; animation:none; } }
+  @media (max-width:600px){ .bulletin-card{ padding:20px 18px } }
   .activity-row{display:flex; align-items:center; gap:12px; padding:12px 6px; border-bottom:1px solid var(--paper-dim)}
   .activity-row:last-child{border-bottom:none}
   .activity-row .athumb{width:52px; height:52px; border-radius:8px; object-fit:cover; background:var(--paper-dim); flex-shrink:0}
@@ -470,6 +608,235 @@
     animation:spin .7s linear infinite; vertical-align:-3px; margin-right:8px;
   }
   @keyframes spin{to{transform:rotate(360deg)}}
+  /* ---------- OFFICERS' LINE BAND ----------
+     The group portrait is shot on a true black ground (sampled #000), so
+     `mix-blend-mode:lighten` against the near-black band makes the backdrop
+     dissolve into the page instead of sitting in a hard rectangle. Anything
+     brighter than the band colour passes through untouched. */
+  .line-band{
+    isolation:isolate;
+    position:relative; overflow:hidden;
+    border-radius:var(--radius);
+    border:1px solid var(--rule);
+    background:
+      radial-gradient(ellipse at 50% 6%, #191f16 0%, var(--ink) 58%),
+      var(--ink);
+    box-shadow:var(--shadow-lg);
+    padding:38px 24px 30px;
+    margin-bottom:20px;
+  }
+  .line-band[hidden]{ display:none }
+  .line-band::before, .line-band::after{
+    content:""; position:absolute; top:0; width:1px; height:170px;
+    background:linear-gradient(180deg, rgba(198,162,76,.28), transparent);
+  }
+  .line-band::before{ left:14%; }
+  .line-band::after{ right:14%; }
+  .line-head{ position:relative; z-index:1; text-align:center }
+  .line-title{
+    margin:0; font-family:'Cinzel',serif; font-weight:600;
+    font-size:clamp(20px, 3.4vw, 30px); letter-spacing:.10em; text-transform:uppercase;
+    color:var(--gold-bright);
+  }
+  .line-sub{
+    margin:8px 0 0; font-family:'Inter',sans-serif; font-size:11px; letter-spacing:.20em;
+    text-transform:uppercase; color:rgba(245,239,220,.55);
+  }
+  .line-rule{
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    max-width:300px; margin:18px auto 6px;
+  }
+  .line-rule::before, .line-rule::after{
+    content:""; flex:1; height:1px;
+  }
+  .line-rule::before{ background:linear-gradient(90deg, transparent, var(--gold-deep)) }
+  .line-rule::after{ background:linear-gradient(90deg, var(--gold-deep), transparent) }
+  .line-rule svg{
+    width:16px; height:16px; stroke:var(--gold); fill:none; stroke-width:1.4; flex-shrink:0;
+  }
+
+  .line-stage{ position:relative; max-width:800px; margin:6px auto 0 }
+  .line-photo{
+    width:100%; height:auto; display:block;
+    mix-blend-mode:lighten;
+    -webkit-mask-image:linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
+            mask-image:linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
+    opacity:0; transform:scale(1.02);
+    animation:line-photo-in 1.4s var(--ease-out) .12s forwards;
+  }
+  @keyframes line-photo-in{ to{ opacity:1; transform:scale(1) } }
+
+  .line-plates{ position:relative; height:96px; margin-top:-14px; list-style:none; padding:0 }
+  .line-plate{
+    position:absolute; top:0; left:var(--x, 50%); transform:translateX(-50%);
+    width:min(32%, 200px); text-align:center;
+    opacity:0; animation:plate-in .7s var(--ease-out) forwards;
+  }
+  @keyframes plate-in{ to{ opacity:1 } }
+  .line-plate::before{
+    content:""; display:block; width:1px; height:20px; margin:0 auto 12px;
+    background:linear-gradient(180deg, transparent, var(--gold-deep));
+  }
+  .line-plate .lp-name{
+    display:block; font-family:'Inter',sans-serif; font-weight:600; font-size:15px;
+    color:var(--paper); line-height:1.3;
+  }
+  .line-plate .lp-pos{
+    display:block; margin-top:5px; font-family:'Cinzel',serif; font-size:10.5px;
+    letter-spacing:.11em; text-transform:uppercase; color:var(--gold);
+  }
+  .line-plate.is-principal .lp-name{ font-size:17px; color:#fff }
+  .line-plate.is-principal .lp-pos{ color:var(--gold-bright) }
+  .line-plate.is-principal::before{ height:26px }
+
+  @media (max-width:640px){
+    .hero{ padding:44px 18px 44px }
+    .seal{ width:104px; height:104px; margin-bottom:16px }
+    .lodge-sub{ letter-spacing:.12em }
+    .lodge-tag{ font-size:16px; margin-top:14px }
+    .line-sub{ letter-spacing:.12em }
+    .line-title{ letter-spacing:.06em }
+    .line-band{ padding:30px 16px 24px }
+    .line-band::before, .line-band::after{ display:none }
+    .line-photo{
+      -webkit-mask-image:linear-gradient(to bottom, #000 0%, #000 92%, transparent 100%);
+              mask-image:linear-gradient(to bottom, #000 0%, #000 92%, transparent 100%);
+    }
+    .line-plates{
+      position:static; height:auto; margin-top:10px;
+      display:grid; gap:1px; background:rgba(198,162,76,.18);
+      border:1px solid rgba(198,162,76,.18); border-radius:10px; overflow:hidden;
+    }
+    .line-plate{
+      position:static; transform:none; width:auto; text-align:left;
+      display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+      padding:12px 14px; background:rgba(12,15,10,.7);
+    }
+    .line-plate::before{ display:none }
+    .line-plate .lp-name{ font-size:15px }
+    .line-plate.is-principal .lp-name{ font-size:15px }
+    .line-plate .lp-pos{ margin-top:0; text-align:right; flex-shrink:0; font-size:9.5px; letter-spacing:.08em }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .line-photo, .line-plate{ opacity:1; transform:none; animation:none }
+  }
+
+  /* ---------- SKELETON LOADING ---------- */
+  .sk{ position:relative; overflow:hidden; background:var(--paper-dim); border-radius:10px }
+  .sk::after{
+    content:""; position:absolute; inset:0; transform:translateX(-100%);
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
+    animation:sk-shimmer 1.6s infinite;
+  }
+  @keyframes sk-shimmer{ to{ transform:translateX(100%) } }
+  @media (prefers-reduced-motion: reduce){ .sk::after{ animation:none } }
+  .sk-line{ height:12px; margin:0 auto }
+  .sk-circle{ border-radius:50% }
+  .sk-officer-card{
+    border:1px solid var(--paper-dim); border-radius:12px; background:#fff;
+    padding:22px 12px 20px; display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .sk-gallery-card{
+    border:1px solid var(--paper-dim); border-radius:var(--radius); background:#fff; overflow:hidden;
+  }
+  .sk-bulletin-card{
+    border:1px solid var(--paper-dim); border-radius:12px; background:#fff; padding:24px 26px; margin-top:16px;
+  }
+
+  /* ---------- EMPTY STATES ---------- */
+  .empty-state{
+    text-align:center; padding:48px 24px; color:var(--text-soft);
+    border:1px dashed var(--paper-dim); border-radius:12px; background:var(--paper);
+    margin-top:18px;
+  }
+  .empty-state svg{ width:34px; height:34px; stroke:var(--gold-deep); fill:none; stroke-width:1.4; opacity:.85 }
+  .empty-state .es-title{
+    display:block; font-family:'Cinzel',serif; font-size:16px; color:var(--ink);
+    letter-spacing:.05em; margin:14px 0 6px;
+  }
+  .empty-state p{ margin:0 auto; max-width:44ch; font-size:16px }
+  .empty-state.is-error{ border-color:#e2b7b3; background:#fbf1f0; color:var(--bad) }
+  .empty-state.is-error svg{ stroke:var(--bad) }
+  .empty-state.is-error .es-title{ color:var(--bad) }
+
+  /* ---------- PHOTO LIGHTBOX ---------- */
+  .lightbox{
+    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    padding:clamp(16px, 4vw, 48px);
+    background:rgba(8,10,7,.95);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    opacity:0; pointer-events:none; transition:opacity .28s var(--ease-out);
+  }
+  .lightbox.open{ opacity:1; pointer-events:auto }
+  .lightbox img{
+    max-width:min(1240px, 92vw); max-height:82vh; object-fit:contain;
+    border-radius:6px; box-shadow:0 30px 90px rgba(0,0,0,.7);
+    transform:scale(.97); transition:transform .32s var(--ease-out);
+  }
+  .lightbox.open img{ transform:scale(1) }
+  .lb-btn{
+    position:absolute; border:1px solid rgba(198,162,76,.35); border-radius:50%;
+    width:46px; height:46px; display:flex; align-items:center; justify-content:center;
+    background:rgba(12,15,10,.72); color:var(--paper); cursor:pointer;
+    transition:background .18s ease, border-color .18s ease, transform .18s var(--ease-out);
+  }
+  .lb-btn:hover{ background:var(--green); border-color:var(--gold); transform:scale(1.06) }
+  .lb-btn svg{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2 }
+  .lb-close{ top:clamp(12px,3vw,28px); right:clamp(12px,3vw,28px) }
+  .lb-prev{ left:clamp(8px,2vw,28px); top:50%; margin-top:-23px }
+  .lb-next{ right:clamp(8px,2vw,28px); top:50%; margin-top:-23px }
+  .lb-count{
+    position:absolute; bottom:clamp(12px,3vw,28px); left:50%; transform:translateX(-50%);
+    font-family:'Inter',sans-serif; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:rgba(245,239,220,.7);
+  }
+  .gallery-photo-wrap{ cursor:zoom-in }
+  .gcarousel-btn.expand{ top:8px; right:8px; transform:none }
+  .gallery-photo-wrap:focus-within .gcarousel-btn,
+  .gcarousel-btn:focus-visible{ opacity:1 }
+  .gcarousel-dots .gdot:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:2px }
+  @media (prefers-reduced-motion: reduce){
+    .lightbox, .lightbox img{ transition:none }
+  }
+
+  /* ---------- PANEL HEADINGS ----------
+     Public sections put their heading straight on the paper, so the cards
+     underneath are the only cards — no card inside a card. */
+  .panel-head{ margin:0 0 22px }
+  .panel-head h2{
+    margin:0; font-size:clamp(24px, 3vw, 32px);
+  }
+  .panel-head p.hint{ margin:10px 0 0; max-width:68ch; font-size:16px }
+  .panel-head + .filter-pills{ margin-top:0 }
+  #officers-current, #bulletin-list, #gallery-grid{ margin-top:0 }
+  /* cards now sit on paper rather than on white */
+  .officer-card{ background:#fff }
+  .b-details, .b-detail{ max-width:68ch }
+  .b-details{ margin-left:0 }
+  .b-signoff + .b-signoff{ border-top:none; margin-top:12px; padding-top:0 }
+
+  /* ---------- MISC POLISH ---------- */
+  .ring span{ letter-spacing:.06em }
+  .ring-caption{
+    font-family:'Inter',sans-serif; font-size:11px; color:var(--text-soft);
+    text-align:center; margin-top:6px; letter-spacing:.04em;
+  }
+  .detail-head{ gap:22px }
+  .stat{ transition:border-color .18s ease }
+  .stat:hover{ border-color:var(--rule) }
+  .term-tag{
+    display:inline-block; font-family:'Inter',sans-serif; font-size:11px; font-weight:700;
+    letter-spacing:.10em; text-transform:uppercase; color:var(--gold-deep);
+    background:var(--paper); border:1px solid var(--rule); padding:3px 11px; border-radius:20px;
+    margin-left:10px; vertical-align:2px;
+  }
+  .footer-note{ border-top:1px solid var(--paper-dim); max-width:960px; margin:0 auto }
+  .btn{ transition:background .18s var(--ease-out), transform .12s var(--ease-out) }
+  .btn:active{ transform:translateY(1px) }
+  .btn[disabled]{ opacity:.55; cursor:not-allowed }
+  .btn[disabled]:hover{ background:var(--green) }
+  .filter-pill{ font-variant-numeric:tabular-nums }
+  input[type="text"]::placeholder, input[type="password"]::placeholder{ color:#7d745c }
 </style>
 </head>
 <body>
@@ -530,23 +897,26 @@
   <p class="lodge-tag" id="lodge-tag"><span id="tag-text">Membership standing and attendance, drawn live from the Lodge secretary's records.</span></p>
 </header>
 
+<div class="nav-shell" id="nav-shell">
 <nav class="ribbon-nav" role="tablist" aria-label="Sections">
-  <button class="ribbon-btn main-tab" role="tab" aria-selected="true" data-panel="lookup">
+  <button class="ribbon-btn main-tab" role="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" tabindex="0" data-panel="lookup">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Find My Status</span>
   </button>
-  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="activities">
-    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Accomplishments &amp; Activities</span>
+  <button class="ribbon-btn main-tab" role="tab" id="tab-activities" aria-controls="panel-activities" aria-selected="false" tabindex="-1" data-panel="activities">
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Activities</span>
   </button>
-  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="officers">
+  <button class="ribbon-btn main-tab" role="tab" id="tab-officers" aria-controls="panel-officers" aria-selected="false" tabindex="-1" data-panel="officers">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Lodge Officers</span>
   </button>
-  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="bulletin">
+  <button class="ribbon-btn main-tab" role="tab" id="tab-bulletin" aria-controls="panel-bulletin" aria-selected="false" tabindex="-1" data-panel="bulletin">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin Board</span>
   </button>
-  <button class="ribbon-btn main-tab" role="tab" aria-selected="false" data-panel="admin">
+  <span class="nav-div" role="none" aria-hidden="true"></span>
+  <button class="ribbon-btn ribbon-btn-ghost main-tab" role="tab" id="tab-admin" aria-controls="panel-admin" aria-selected="false" tabindex="-1" data-panel="admin">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6z"/></svg>Officers' Dashboard</span>
   </button>
 </nav>
+</div>
 
 <main>
   <div id="config-warning" class="config-warning" style="display:none">
@@ -554,7 +924,7 @@
   </div>
 
   <!-- ===================== MEMBER LOOKUP ===================== -->
-  <section id="panel-lookup" class="panel active">
+  <section id="panel-lookup" class="panel active" role="tabpanel" tabindex="0" aria-labelledby="tab-lookup">
     <div class="card">
       <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Find My Status</h2>
       <p class="hint" style="margin-top:-6px">Search your last name to see your own membership standing and attendance record.</p>
@@ -565,10 +935,10 @@
         </div>
         <button class="btn" id="lookup-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search</span></button>
       </div>
-      <div id="lookup-status" class="hint"></div>
+      <div id="lookup-status" class="hint" role="status" aria-live="polite"></div>
       <ul class="result-list" id="lookup-results"></ul>
-      <div id="lookup-detail"></div>
     </div>
+    <div id="lookup-detail"></div>
 
     <div class="card" id="celebrants-card" style="display:none">
       <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C9 2 12 7 12 7z"/></svg><span id="celebrants-title">This Month's Celebrants</span></h2>
@@ -577,51 +947,58 @@
   </section>
 
   <!-- ===================== ACCOMPLISHMENTS & ACTIVITIES (public gallery) ===================== -->
-  <section id="panel-activities" class="panel">
-    <div class="card">
-      <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Accomplishments &amp; Activities</h2>
-      <p class="hint" style="margin-top:-6px">A running record of the Lodge's events, projects, and milestones.</p>
-      <div id="gallery-status" class="hint"><span class="spinner"></span>Loading…</div>
-      <div class="filter-pills" id="gallery-filters" style="display:none">
-        <button class="filter-pill active" data-filter="">All</button>
-        <button class="filter-pill" data-filter="Accomplishment">Accomplishment</button>
-        <button class="filter-pill" data-filter="Activity">Activity</button>
-        <button class="filter-pill" data-filter="Event">Event</button>
-      </div>
-      <div class="gallery-grid" id="gallery-grid"></div>
+  <section id="panel-activities" class="panel" role="tabpanel" tabindex="0" aria-labelledby="tab-activities">
+    <div class="panel-head">
+      <h2><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Accomplishments &amp; Activities</h2>
+      <p class="hint">A running record of the Lodge's events, projects, and milestones.</p>
     </div>
+    <div id="gallery-status" class="hint" role="status" aria-live="polite"></div>
+    <div class="filter-pills" id="gallery-filters" style="display:none">
+      <button class="filter-pill active" data-filter="">All</button>
+      <button class="filter-pill" data-filter="Accomplishment">Accomplishment</button>
+      <button class="filter-pill" data-filter="Activity">Activity</button>
+      <button class="filter-pill" data-filter="Event">Event</button>
+    </div>
+    <div class="gallery-grid" id="gallery-grid"></div>
   </section>
 
   <!-- ===================== LODGE OFFICERS (public) ===================== -->
-  <section id="panel-officers" class="panel">
-    <div class="card">
-      <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Lodge Officers</h2>
-      <p class="hint" style="margin-top:-6px">The current officer line, and a look back at past terms.</p>
-      <div id="officers-status" class="hint"><span class="spinner"></span>Loading…</div>
-      <div id="officers-current"></div>
+  <section id="panel-officers" class="panel" role="tabpanel" tabindex="0" aria-labelledby="tab-officers">
 
-      <div id="past-officers-block" style="display:none; margin-top:32px">
-        <h3 style="font-family:'Cinzel',serif; color:var(--ink); font-size:18px; border-top:1px solid var(--paper-dim); padding-top:24px">Past Officers</h3>
-        <div class="search-row" style="max-width:280px">
-          <select id="past-term-select"></select>
-        </div>
-        <div id="past-officers-list" style="margin-top:14px"></div>
+    <!-- Group portrait of the sitting line. Populated by renderLineBand()
+         from LINE_PHOTO + the live Officers sheet, so the names under the
+         photo always match the term that is actually posted. -->
+    <div class="line-band" id="line-band" hidden></div>
+
+    <div class="panel-head">
+      <h2><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Lodge Officers</h2>
+      <p class="hint">The current officer line, and a look back at past terms.</p>
+    </div>
+    <div id="officers-status" class="hint" role="status" aria-live="polite"></div>
+    <div id="officers-current"></div>
+
+    <div class="card" id="past-officers-block" style="display:none; margin-top:36px">
+      <h3 style="font-family:'Cinzel',serif; color:var(--ink); font-size:18px; letter-spacing:.06em; margin:0 0 14px">Past Officers</h3>
+      <div class="search-row" style="max-width:280px">
+        <label class="hint" for="past-term-select" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Choose a term</label>
+        <select id="past-term-select"></select>
       </div>
+      <div id="past-officers-list" style="margin-top:14px"></div>
     </div>
   </section>
 
   <!-- ===================== BULLETIN BOARD (public) ===================== -->
-  <section id="panel-bulletin" class="panel">
-    <div class="card">
-      <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin Board</h2>
-      <p class="hint" style="margin-top:-6px">Announcements and notices from the Lodge secretary.</p>
-      <div id="bulletin-status" class="hint"><span class="spinner"></span>Loading…</div>
-      <div id="bulletin-list"></div>
+  <section id="panel-bulletin" class="panel" role="tabpanel" tabindex="0" aria-labelledby="tab-bulletin">
+    <div class="panel-head">
+      <h2><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin Board</h2>
+      <p class="hint">Announcements and notices from the Lodge secretary.</p>
     </div>
+    <div id="bulletin-status" class="hint" role="status" aria-live="polite"></div>
+    <div id="bulletin-list"></div>
   </section>
 
   <!-- ===================== ADMIN ===================== -->
-  <section id="panel-admin" class="panel">
+  <section id="panel-admin" class="panel" role="tabpanel" tabindex="0" aria-labelledby="tab-admin">
     <div class="card lock-card" id="admin-lock">
       <div class="seal"><img src="noli-logo.jpg" alt=""></div>
       <h2 style="margin:0 0 4px;justify-content:center"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Officers' Dashboard</h2>
@@ -918,11 +1295,47 @@
 
 <p class="footer-note">Noli Me Tangere Lodge No. 42, F.&amp;A.M. — data is maintained in Google Sheets and reflected here automatically.</p>
 
+<!-- Full-screen photo viewer for the activities gallery -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+  <button class="lb-btn lb-close" type="button" id="lb-close" aria-label="Close photo viewer">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <button class="lb-btn lb-prev" type="button" id="lb-prev" aria-label="Previous photo">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button class="lb-btn lb-next" type="button" id="lb-next" aria-label="Next photo">
+    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <img id="lb-img" alt="">
+  <div class="lb-count" id="lb-count"></div>
+</div>
+
 <script>
 /* =====================================================================
    CONFIGURATION — paste your deployed Apps Script Web App URL below
    ===================================================================== */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUcMlS1ePkQiRNTwk8kUTilL0CX7P_-CqAuQBRp9hyj9wK69OXNobEnkFeUze5ErFu/exec';
+
+/* =====================================================================
+   OFFICERS' LINE PORTRAIT — the group photo on the Lodge Officers tab.
+
+   When a new line is installed: upload the group photo to imgur, copy the
+   direct i.imgur.com link, and update `url` + `term` below. The names under
+   the photo are read from the Officers sheet (matched on `order`), so they
+   can never drift out of step with what the sheet says.
+
+   `order`  — positions left-to-right as the brethren stand in the photo.
+   `marks`  — horizontal centre of each brother, as a % of the photo width.
+              Nudge these if a new photo is composed differently.
+   Set `url` to '' to remove the band entirely.
+   ===================================================================== */
+const LINE_PHOTO = {
+  url: 'https://i.imgur.com/leH5PoK.jpeg',
+  term: '2026-2027',
+  order: ['Senior Warden', 'Worshipful Master', 'Junior Warden'],
+  marks: [21.5, 49.5, 77],
+  principal: 'Worshipful Master'
+};
 
 
 /* ---------------------------------------------------------------------
@@ -951,6 +1364,71 @@ function jsonp(params) {
 }
 
 /* ---------------------------------------------------------------------
+   Escape sheet-authored text before it goes into a template literal.
+   Titles, names and announcement bodies are typed by hand in Google
+   Sheets — an unescaped < or & used to break the markup around it.
+   --------------------------------------------------------------------- */
+function esc(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/* An en dash reads better than a hyphen in a term range: 2026–2027 */
+function formatTerm(t) { return String(t || '').replace(/\s*-\s*/, '\u2013'); }
+
+function emptyState(title, body, isError) {
+  const icon = isError
+    ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.2v.1"/></svg>'
+    : '<svg viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+  return `<div class="empty-state${isError ? ' is-error' : ''}">${icon}` +
+         `<span class="es-title">${esc(title)}</span><p>${esc(body)}</p></div>`;
+}
+
+/* ---------------------------------------------------------------------
+   SKELETONS — shown while the Apps Script round-trip is in flight, so the
+   panels hold their shape instead of collapsing to a line of text.
+   --------------------------------------------------------------------- */
+function skeletonOfficers(n) {
+  let out = '<div class="officer-grid" aria-hidden="true">';
+  for (let i = 0; i < n; i++) {
+    out += '<div class="sk-officer-card">' +
+             '<div class="sk sk-circle" style="width:88px;height:88px"></div>' +
+             '<div class="sk sk-line" style="width:72%"></div>' +
+             '<div class="sk sk-line" style="width:52%;height:9px"></div>' +
+           '</div>';
+  }
+  return out + '</div>';
+}
+function skeletonGallery(n) {
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    out += '<div class="sk-gallery-card">' +
+             '<div class="sk" style="aspect-ratio:4/3;border-radius:0"></div>' +
+             '<div style="padding:20px;display:grid;gap:10px">' +
+               '<div class="sk sk-line" style="width:34%;height:16px;border-radius:20px"></div>' +
+               '<div class="sk sk-line" style="width:78%;height:18px"></div>' +
+               '<div class="sk sk-line" style="width:100%"></div>' +
+               '<div class="sk sk-line" style="width:88%"></div>' +
+             '</div>' +
+           '</div>';
+  }
+  return out;
+}
+function skeletonBulletin(n) {
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    out += '<div class="sk-bulletin-card">' +
+             '<div class="sk sk-line" style="width:26%;height:16px;border-radius:20px;margin:0 0 14px"></div>' +
+             '<div class="sk sk-line" style="width:58%;height:20px;margin:0 0 10px"></div>' +
+             '<div class="sk sk-line" style="width:100%;margin:0 0 8px"></div>' +
+             '<div class="sk sk-line" style="width:92%;margin:0"></div>' +
+           '</div>';
+  }
+  return out;
+}
+
+/* ---------------------------------------------------------------------
    HERO TAGLINE ROTATOR — crossfades between the plain tagline and quote
    --------------------------------------------------------------------- */
 (function rotateHeroTagline() {
@@ -976,14 +1454,56 @@ function jsonp(params) {
 /* ---------------------------------------------------------------------
    NAV
    --------------------------------------------------------------------- */
-document.querySelectorAll('.main-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.main-tab').forEach(b => b.setAttribute('aria-selected', 'false'));
-    btn.setAttribute('aria-selected', 'true');
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+const mainTabs = Array.from(document.querySelectorAll('.main-tab'));
+
+function selectMainTab(btn, moveFocus) {
+  mainTabs.forEach(b => { b.setAttribute('aria-selected', 'false'); b.tabIndex = -1; });
+  btn.setAttribute('aria-selected', 'true');
+  btn.tabIndex = 0;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+  if (moveFocus) btn.focus();
+  // If the reader had scrolled down into the previous panel, bring the top of
+  // the new one into view rather than dropping them into its middle.
+  const shell = document.getElementById('nav-shell');
+  if (shell && shell.dataset.stuck === 'true') {
+    const top = document.querySelector('main').offsetTop - shell.offsetHeight - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }
+}
+
+mainTabs.forEach((btn, i) => {
+  btn.addEventListener('click', () => selectMainTab(btn, false));
+  btn.addEventListener('keydown', e => {
+    let next = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = mainTabs[(i + 1) % mainTabs.length];
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = mainTabs[(i - 1 + mainTabs.length) % mainTabs.length];
+    else if (e.key === 'Home') next = mainTabs[0];
+    else if (e.key === 'End') next = mainTabs[mainTabs.length - 1];
+    if (!next) return;
+    e.preventDefault();
+    selectMainTab(next, true);
   });
 });
+
+/* The ribbon pins to the top of the window and tightens once the hero
+   scrolls past, so the five sections stay reachable the whole way down. */
+(function stickyRibbon() {
+  const shell = document.getElementById('nav-shell');
+  if (!shell) return;
+  let ticking = false;
+  const sync = () => {
+    ticking = false;
+    shell.dataset.stuck = shell.getBoundingClientRect().top <= 0.5 ? 'true' : 'false';
+  };
+  sync();
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(sync);
+  }, { passive: true });
+  window.addEventListener('resize', sync);
+})();
 
 /* ---------------------------------------------------------------------
    MEMBER LOOKUP
@@ -1022,7 +1542,7 @@ async function runLookup() {
     data.matches.forEach(m => {
       const li = document.createElement('li');
       li.className = 'result-item';
-      li.innerHTML = `<span class="rname">${m.fullName}</span><span class="rmeta">Raised ${m.yearRaised || '—'}</span>`;
+      li.innerHTML = `<span class="rname">${esc(m.fullName)}</span><span class="rmeta">Raised ${esc(m.yearRaised || '\u2014')}</span>`;
       li.addEventListener('click', () => renderDetail(m));
       resultsEl.appendChild(li);
     });
@@ -1039,10 +1559,10 @@ function avatarHtml(m, sizeClass) {
   const cls = sizeClass ? `avatar ${sizeClass}` : 'avatar';
   const fallbackCls = sizeClass ? `avatar-fallback ${sizeClass}` : 'avatar-fallback';
   if (m.photoUrl) {
-    return `<img class="${cls}" src="${m.photoUrl}" alt="${m.fullName}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
-           `<div class="${fallbackCls}" style="display:none">${initials(m.fullName)}</div>`;
+    return `<img class="${cls}" src="${esc(m.photoUrl)}" alt="${esc(m.fullName)}" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+           `<div class="${fallbackCls}" style="display:none" aria-hidden="true">${esc(initials(m.fullName))}</div>`;
   }
-  return `<div class="${fallbackCls}">${initials(m.fullName)}</div>`;
+  return `<div class="${fallbackCls}" role="img" aria-label="${esc(m.fullName)}">${esc(initials(m.fullName))}</div>`;
 }
 
 function renderDetail(m) {
@@ -1056,28 +1576,34 @@ function renderDetail(m) {
     .map(mo => {
       const v = (mo.value || '').toString().toUpperCase();
       const cls = v === 'C' ? 'present' : (v === 'NO' || v === 'NC' ? 'partial' : '');
-      return `<span class="month-chip ${cls}">${mo.month}: ${mo.value}</span>`;
+      return `<span class="month-chip ${cls}">${esc(mo.month)}: ${esc(mo.value)}</span>`;
     }).join('');
 
   document.getElementById('lookup-detail').innerHTML = `
     <div class="card detail">
       <div class="detail-head">
         ${avatarHtml(m)}
-        <div class="ring" style="--pct:${pct}"><b>${attTotal || 0}</b><span>ATTEND.</span></div>
         <div>
-          <h3>${m.fullName}</h3>
-          <div class="yr">Raised ${m.yearRaised || '—'}${m.lml === 'Y' ? ' · LML Member' : ''}</div>
-          <span class="badge ${statusBadgeClass(m.status)}" style="margin-top:8px">${m.status || 'Unspecified'}</span>
+          <div class="ring" style="--pct:${pct}" role="img"
+               aria-label="${attTotal || 0} of ${minAtt} meetings attended this term">
+            <b>${attTotal || 0}</b><span>ATTEND.</span>
+          </div>
+          <div class="ring-caption">of ${minAtt} this term</div>
+        </div>
+        <div>
+          <h3>${esc(m.fullName)}</h3>
+          <div class="yr">Raised ${esc(m.yearRaised || '—')}${m.lml === 'Y' ? ' &middot; LML Member' : ''}</div>
+          <span class="badge ${statusBadgeClass(m.status)}" style="margin-top:8px">${esc(m.status || 'Unspecified')}</span>
         </div>
       </div>
       <div class="grid-2">
-        <div class="stat"><div class="label">In Good Standing</div><div class="value">${ynIcon(m.goodStanding)} ${m.goodStanding || ''}</div></div>
-        <div class="stat"><div class="label">Master Mason Proficiency</div><div class="value">${m.proficiency || m.attendanceRemarks ? (m.proficiency || '—') : '—'}</div></div>
-        <div class="stat"><div class="label">Qualified to Vote</div><div class="value">${ynIcon(m.qualifiedToVote)} ${m.qualifiedToVote || ''}</div></div>
-        <div class="stat"><div class="label">Outstanding Dues</div><div class="value">${m.arrears ? '₱' + Number(m.arrears).toLocaleString() : '₱0'}</div></div>
+        <div class="stat"><div class="label">In Good Standing</div><div class="value">${ynIcon(m.goodStanding)} ${esc(m.goodStanding || '—')}</div></div>
+        <div class="stat"><div class="label">Master Mason Proficiency</div><div class="value">${esc(m.proficiency || '—')}</div></div>
+        <div class="stat"><div class="label">Qualified to Vote</div><div class="value">${ynIcon(m.qualifiedToVote)} ${esc(m.qualifiedToVote || '—')}</div></div>
+        <div class="stat"><div class="label">Outstanding Dues</div><div class="value">${m.arrears ? '\u20B1' + Number(m.arrears).toLocaleString() : '\u20B10'}</div></div>
       </div>
       ${monthsHtml ? `<div class="month-strip">${monthsHtml}</div>` : ''}
-      ${m.attendanceRemarks ? `<p class="hint" style="margin-top:16px">Note: ${m.attendanceRemarks}</p>` : ''}
+      ${m.attendanceRemarks ? `<p class="hint" style="margin-top:16px">Note: ${esc(m.attendanceRemarks)}</p>` : ''}
     </div>
   `;
 }
@@ -1101,8 +1627,8 @@ async function loadCelebrants() {
       <div class="celebrant-item">
         ${avatarHtml(c, 'avatar-sm')}
         <div>
-          <div style="font-family:'Inter',sans-serif;font-weight:600">${c.fullName}</div>
-          <div class="hint" style="margin:0">${MONTH_NAMES[c.month - 1]} ${c.day}</div>
+          <div style="font-family:'Inter',sans-serif;font-weight:600">${esc(c.fullName)}</div>
+          <div class="hint" style="margin:0">${esc(MONTH_NAMES[c.month - 1])} ${esc(c.day)}</div>
         </div>
       </div>
     `).join('');
@@ -1135,9 +1661,15 @@ function activityPhotoBlock(a, cardIndex) {
     return `<div class="gallery-photo-wrap"><div class="gallery-photo-fallback">${galleryFallbackIcon()}</div></div>`;
   }
   const imgs = photos.map((url, i) => `
-    <img class="gallery-photo${i === 0 ? ' active' : ''}" data-i="${i}" src="${url}" alt="${a.title}"
-      onerror="this.style.display='none'">
+    <img class="gallery-photo${i === 0 ? ' active' : ''}" data-i="${i}" src="${esc(url)}"
+      alt="${esc(a.title)}${photos.length > 1 ? `, photo ${i + 1} of ${photos.length}` : ''}"
+      loading="lazy" decoding="async" onerror="this.style.display='none'">
   `).join('');
+  const expand = `
+    <button class="gcarousel-btn expand" type="button"
+      aria-label="View ${esc(a.title)} full screen${photos.length > 1 ? ` (${photos.length} photos)` : ''}">
+      <svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7.5 7.5M3 21l7.5-7.5"/></svg>
+    </button>`;
   const controls = photos.length > 1 ? `
     <button class="gcarousel-btn prev" type="button" aria-label="Previous photo">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
@@ -1149,7 +1681,7 @@ function activityPhotoBlock(a, cardIndex) {
       ${photos.map((_, i) => `<button class="gdot${i === 0 ? ' active' : ''}" type="button" data-i="${i}" aria-label="Photo ${i + 1}"></button>`).join('')}
     </div>
   ` : '';
-  return `<div class="gallery-photo-wrap" id="gcarousel-${cardIndex}" data-count="${photos.length}">${imgs}${controls}</div>`;
+  return `<div class="gallery-photo-wrap" id="gcarousel-${cardIndex}" data-card="${cardIndex}" data-count="${photos.length}">${imgs}${expand}${controls}</div>`;
 }
 
 let galleryIntervals = [];
@@ -1162,6 +1694,13 @@ function wireCarousels() {
   clearGalleryIntervals();
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   document.querySelectorAll('.gallery-photo-wrap').forEach(wrap => {
+    // paint the lead photo outright, then hand the crossfade back to CSS
+    const lead = wrap.querySelector('.gallery-photo.active');
+    if (lead) {
+      lead.style.transition = 'none';
+      lead.style.opacity = '1';
+      requestAnimationFrame(() => { lead.style.transition = ''; lead.style.opacity = ''; });
+    }
     const count = parseInt(wrap.dataset.count || '0', 10);
     if (count < 2) return;
     let idx = 0;
@@ -1183,27 +1722,34 @@ function wireCarousels() {
 
 let publicActivities = [];
 let activeGalleryFilter = '';
+let shownActivities = [];   // exactly what the grid is displaying, for the lightbox
 
 function renderGalleryGrid() {
   const grid = document.getElementById('gallery-grid');
   const filtered = activeGalleryFilter
     ? publicActivities.filter(a => (a.category || 'Activity') === activeGalleryFilter)
     : publicActivities;
+  shownActivities = filtered;
   if (filtered.length === 0) {
-    grid.innerHTML = `<div class="gallery-empty">Nothing here yet.</div>`;
+    grid.innerHTML = emptyState(
+      'Nothing filed under this heading yet',
+      activeGalleryFilter
+        ? `No ${activeGalleryFilter.toLowerCase()} has been posted so far. Try another filter.`
+        : 'The Lodge\u2019s activities will appear here as the secretary posts them.'
+    );
     clearGalleryIntervals();
     return;
   }
   grid.innerHTML = filtered.map((a, i) => `
-    <div class="gallery-card" data-cat="${a.category || 'Activity'}" style="animation-delay:${Math.min(i * 80, 600)}ms">
+    <article class="gallery-card" data-cat="${esc(a.category || 'Activity')}" style="animation-delay:${Math.min(i * 80, 600)}ms">
       ${activityPhotoBlock(a, i)}
       <div class="gallery-body">
-        <span class="cat-badge">${a.category || 'Activity'}</span>
-        <h3>${a.title}</h3>
-        <div class="gdate">${formatActivityDate(a.date)}</div>
-        <p>${a.description || ''}</p>
+        <span class="cat-badge">${esc(a.category || 'Activity')}</span>
+        <h3>${esc(a.title)}</h3>
+        <div class="gdate">${esc(formatActivityDate(a.date))}</div>
+        <p>${esc(a.description || '')}</p>
       </div>
-    </div>
+    </article>
   `).join('');
   wireCarousels();
 }
@@ -1220,6 +1766,8 @@ document.querySelectorAll('.filter-pill').forEach(pill => {
 async function loadPublicGallery() {
   const statusEl = document.getElementById('gallery-status');
   const filters = document.getElementById('gallery-filters');
+  const grid = document.getElementById('gallery-grid');
+  grid.innerHTML = skeletonGallery(2);
   try {
     const data = await jsonp({ action: 'activities' });
     publicActivities = data.activities || [];
@@ -1227,10 +1775,92 @@ async function loadPublicGallery() {
     if (publicActivities.length > 0) filters.style.display = 'flex';
     renderGalleryGrid();
   } catch (err) {
-    statusEl.textContent = 'Could not load activities right now.';
+    statusEl.style.display = 'none';
+    grid.innerHTML = emptyState(
+      'Activities unavailable',
+      'The Lodge records could not be reached just now. Refresh the page in a moment, or ask the secretary.',
+      true
+    );
   }
 }
 loadPublicGallery();
+
+/* ---------------------------------------------------------------------
+   PHOTO LIGHTBOX — the gallery albums run to nine or more photos, so the
+   card-sized crop is not enough to actually look at them.
+   --------------------------------------------------------------------- */
+const lightbox = {
+  el: document.getElementById('lightbox'),
+  img: document.getElementById('lb-img'),
+  count: document.getElementById('lb-count'),
+  prev: document.getElementById('lb-prev'),
+  next: document.getElementById('lb-next'),
+  urls: [],
+  i: 0,
+  label: '',
+  opener: null
+};
+
+function lbShow(n) {
+  const total = lightbox.urls.length;
+  if (!total) return;
+  lightbox.i = (n + total) % total;
+  lightbox.img.src = lightbox.urls[lightbox.i];
+  lightbox.img.alt = total > 1
+    ? `${lightbox.label}, photo ${lightbox.i + 1} of ${total}`
+    : lightbox.label;
+  lightbox.count.textContent = total > 1 ? `${lightbox.i + 1} / ${total}` : '';
+  const many = total > 1;
+  lightbox.prev.style.display = many ? 'flex' : 'none';
+  lightbox.next.style.display = many ? 'flex' : 'none';
+}
+
+function openLightbox(urls, index, label, opener) {
+  if (!urls || !urls.length) return;
+  lightbox.urls = urls;
+  lightbox.label = label || '';
+  lightbox.opener = opener || null;
+  lightbox.el.hidden = false;
+  void lightbox.el.offsetWidth;   // flush the `hidden` removal so the fade runs
+  lightbox.el.classList.add('open');
+  lbShow(index || 0);
+  document.body.style.overflow = 'hidden';
+  document.getElementById('lb-close').focus();
+}
+
+function closeLightbox() {
+  lightbox.el.classList.remove('open');
+  document.body.style.overflow = '';
+  const back = lightbox.opener;
+  setTimeout(() => { lightbox.el.hidden = true; lightbox.img.removeAttribute('src'); }, 280);
+  if (back && document.contains(back)) back.focus();
+}
+
+document.getElementById('lb-close').addEventListener('click', closeLightbox);
+lightbox.prev.addEventListener('click', () => lbShow(lightbox.i - 1));
+lightbox.next.addEventListener('click', () => lbShow(lightbox.i + 1));
+lightbox.el.addEventListener('click', e => { if (e.target === lightbox.el) closeLightbox(); });
+document.addEventListener('keydown', e => {
+  if (lightbox.el.hidden) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeLightbox(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); lbShow(lightbox.i + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); lbShow(lightbox.i - 1); }
+  else if (e.key === 'Tab') { e.preventDefault(); }   // keep focus inside the viewer
+});
+
+// One delegated listener: the grid is re-rendered on every filter change.
+document.getElementById('gallery-grid').addEventListener('click', e => {
+  const wrap = e.target.closest('.gallery-photo-wrap');
+  if (!wrap) return;
+  // carousel arrows and dots keep their own behaviour
+  if (e.target.closest('.gcarousel-btn.prev, .gcarousel-btn.next, .gdot')) return;
+  const a = shownActivities[parseInt(wrap.dataset.card, 10)];
+  if (!a) return;
+  const urls = (a.photoUrls && a.photoUrls.length) ? a.photoUrls : (a.photoUrl ? [a.photoUrl] : []);
+  const active = wrap.querySelector('.gallery-photo.active');
+  const start = active ? parseInt(active.dataset.i, 10) : 0;
+  openLightbox(urls, start, a.title, wrap.querySelector('.gcarousel-btn.expand'));
+});
 
 /* ---------------------------------------------------------------------
    LODGE OFFICERS — public directory (current line + past terms)
@@ -1244,35 +1874,92 @@ let pastOfficersData = [];
 
 function officerCardHtml(o, i) {
   return `
-    <div class="officer-card" style="animation-delay:${Math.min(i * 60, 480)}ms">
+    <li class="officer-card" style="animation-delay:${Math.min(i * 60, 480)}ms">
       ${avatarHtml({ fullName: o.fullName, photoUrl: o.photoUrl }, 'avatar-md')}
-      <div class="oname">${o.fullName}</div>
-      <div class="oposition">${o.position}</div>
+      <div class="oname">${esc(o.fullName)}</div>
+      <div class="oposition">${esc(o.position)}</div>
+    </li>
+  `;
+}
+
+/* Group portrait of the sitting line. Names come from the sheet and are
+   matched to positions by LINE_PHOTO.order, so the caption under each
+   brother is always whatever the secretary has recorded for that chair. */
+function renderLineBand(current) {
+  const band = document.getElementById('line-band');
+  if (!band || !LINE_PHOTO.url) return;
+
+  const inTerm = (current || []).filter(o => !LINE_PHOTO.term || o.term === LINE_PHOTO.term);
+  const seated = LINE_PHOTO.order.map(pos => inTerm.find(o => o.position === pos) || null);
+  const named = seated.filter(Boolean);
+
+  const term = formatTerm(LINE_PHOTO.term || (named[0] && named[0].term));
+  const roll = named.map(o => o.fullName).join(', ');
+  const alt = roll
+    ? `The ${term} officers' line of Noli Me Tangere Lodge No. 42 in barong and Masonic regalia. Left to right: ${roll}.`
+    : `The ${term} officers' line of Noli Me Tangere Lodge No. 42 in barong and Masonic regalia.`;
+
+  const plates = seated.map((o, i) => {
+    if (!o) return '';
+    const principal = o.position === LINE_PHOTO.principal;
+    const x = LINE_PHOTO.marks[i] !== undefined ? LINE_PHOTO.marks[i] : ((i + 0.5) / seated.length) * 100;
+    return `<li class="line-plate${principal ? ' is-principal' : ''}"
+                 style="--x:${x}%; animation-delay:${560 + i * 130}ms">
+              <span class="lp-name">${esc(o.fullName)}</span>
+              <span class="lp-pos">${esc(o.position)}</span>
+            </li>`;
+  }).join('');
+
+  band.innerHTML = `
+    <div class="line-head">
+      <h3 class="line-title">Officers' Line ${esc(term)}</h3>
+      <p class="line-sub">Noli Me Tangere Lodge No. 42 &middot; F. &amp; A.M.</p>
+      <div class="line-rule" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 3 21 12 12 21 3 12z"/><path d="M12 8.5 15.5 12 12 15.5 8.5 12z"/></svg>
+      </div>
+    </div>
+    <div class="line-stage">
+      <img class="line-photo" src="${esc(LINE_PHOTO.url)}" alt="${esc(alt)}"
+           onerror="this.closest('.line-band').hidden = true">
+      ${plates ? `<ol class="line-plates">${plates}</ol>` : ''}
     </div>
   `;
+  band.hidden = false;
 }
 
 async function loadPublicOfficers() {
   const statusEl = document.getElementById('officers-status');
   const currentEl = document.getElementById('officers-current');
+  currentEl.innerHTML = skeletonOfficers(4);
   try {
     const data = await jsonp({ action: 'officers' });
     statusEl.style.display = 'none';
     const current = data.current || [];
+    renderLineBand(current);
     if (current.length === 0) {
-      currentEl.innerHTML = `<p class="hint">The current officer line hasn't been posted yet.</p>`;
+      currentEl.innerHTML = emptyState(
+        'No line posted yet',
+        'Once the secretary adds officers to the Officers sheet, the current line appears here.'
+      );
     } else {
       let html = '';
+      let n = 0;
+      const section = (title, members) =>
+        `<h3 class="officer-section-title">${esc(title)}</h3>` +
+        `<ul class="officer-grid">${members.map(o => officerCardHtml(o, n++)).join('')}</ul>`;
       OFFICER_CATEGORIES.forEach(cat => {
         const members = current.filter(o => cat.positions.includes(o.position));
         if (members.length === 0) return;
-        html += `<div class="officer-section-title">${cat.title}</div><div class="officer-grid">${members.map((o, i) => officerCardHtml(o, i)).join('')}</div>`;
+        html += section(cat.title, members);
       });
       // catch any position not in the known lists, so nothing silently disappears
       const known = OFFICER_CATEGORIES.flatMap(c => c.positions);
       const other = current.filter(o => !known.includes(o.position));
-      if (other.length > 0) {
-        html += `<div class="officer-section-title">Other</div><div class="officer-grid">${other.map((o, i) => officerCardHtml(o, i)).join('')}</div>`;
+      if (other.length > 0) html += section('Other', other);
+      const full = OFFICER_CATEGORIES[0].positions.length + OFFICER_CATEGORIES[1].positions.length;
+      if (current.length < full) {
+        html += `<p class="line-gap">${current.length} of the ${full} elected and appointed chairs ` +
+                `have been posted so far. The rest appear as the secretary records them.</p>`;
       }
       currentEl.innerHTML = html;
     }
@@ -1282,12 +1969,17 @@ async function loadPublicOfficers() {
     const block = document.getElementById('past-officers-block');
     if (data.terms && data.terms.length > 0) {
       block.style.display = 'block';
-      termSelect.innerHTML = data.terms.map(t => `<option value="${t}">${t}</option>`).join('');
+      termSelect.innerHTML = data.terms.map(t => `<option value="${esc(t)}">${esc(formatTerm(t))}</option>`).join('');
       renderPastOfficers(data.terms[0]);
       termSelect.addEventListener('change', () => renderPastOfficers(termSelect.value));
     }
   } catch (err) {
-    statusEl.textContent = 'Could not load the officer line right now.';
+    statusEl.style.display = 'none';
+    currentEl.innerHTML = emptyState(
+      'Officer line unavailable',
+      'The Lodge records could not be reached just now. Refresh the page in a moment, or ask the secretary.',
+      true
+    );
   }
 }
 function renderPastOfficers(term) {
@@ -1295,8 +1987,8 @@ function renderPastOfficers(term) {
   const rows = pastOfficersData
     .filter(o => o.term === term)
     .sort((a, b) => (OFFICER_CATEGORIES.flatMap(c => c.positions).indexOf(a.position)) - (OFFICER_CATEGORIES.flatMap(c => c.positions).indexOf(b.position)));
-  if (rows.length === 0) { list.innerHTML = `<p class="hint">No officers recorded for ${term}.</p>`; return; }
-  list.innerHTML = rows.map(o => `<div class="past-officer-row"><span>${o.fullName}</span><span class="ppos">${o.position}</span></div>`).join('');
+  if (rows.length === 0) { list.innerHTML = `<p class="hint">No officers recorded for ${esc(term)}.</p>`; return; }
+  list.innerHTML = rows.map(o => `<div class="past-officer-row"><span>${esc(o.fullName)}</span><span class="ppos">${esc(o.position)}</span></div>`).join('');
 }
 loadPublicOfficers();
 
@@ -1309,29 +2001,127 @@ function formatBulletinDate(dateStr) {
   if (isNaN(d.getTime())) return dateStr;
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
+/* Announcements are typed into a single Sheets cell, and the secretary's
+   house style puts the particulars on emoji-prefixed lines:
+
+       \u{1F4C5} Date: Saturday, August 22, 2026
+       \u{1F4CD} Venue: Society Lounge
+       G/F Corner, Atrium of Makati
+
+   Those lines are lifted into a proper detail table with the site's own
+   drawn icons, keeping the secretary's words exactly as written. A message
+   without any such lines is rendered verbatim, as before. */
+const DETAIL_RE = /^\s*(\p{Extended_Pictographic}[\uFE0F\u200D\p{Extended_Pictographic}]*)\s*([^:]{2,30}):\s*(.*)$/u;
+const SIGNOFF_RE = /^(fraternally|sincerely|respectfully|yours|in the bonds|so mote it be)\b/i;
+
+const DETAIL_ICONS = {
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  attire: '<path d="M9 3 12 6.2 15 3l5 2.6V10l-2.6 1.1V21H6.6V11.1L4 10V5.6z"/>',
+  phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/>',
+  money: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8.2v.1"/>'
+};
+
+function detailIcon(label) {
+  const l = (label || '').toLowerCase();
+  if (/date|when|day/.test(l)) return DETAIL_ICONS.calendar;
+  if (/time|hour|call to order/.test(l)) return DETAIL_ICONS.clock;
+  if (/venue|place|location|where|address|lodge hall/.test(l)) return DETAIL_ICONS.pin;
+  if (/guest|attendee|who|brethren|invited/.test(l)) return DETAIL_ICONS.users;
+  if (/dress|attire|code|uniform/.test(l)) return DETAIL_ICONS.attire;
+  if (/phone|contact|mobile|rsvp/.test(l)) return DETAIL_ICONS.phone;
+  if (/email|e-mail/.test(l)) return DETAIL_ICONS.mail;
+  if (/fee|cost|price|donation|assessment|due/.test(l)) return DETAIL_ICONS.money;
+  return DETAIL_ICONS.info;
+}
+
+function parseBulletinMessage(message) {
+  const lines = String(message || '').replace(/\r\n/g, '\n').split('\n');
+  const blocks = [];
+  let cur = null, lastDetail = null;
+  lines.forEach(line => {
+    const m = line.match(DETAIL_RE);
+    if (m) {
+      if (!cur || cur.type !== 'details') { cur = { type: 'details', items: [] }; blocks.push(cur); }
+      lastDetail = { label: m[2].trim(), value: m[3].trim() };
+      cur.items.push(lastDetail);
+      return;
+    }
+    if (line.trim() === '') {
+      lastDetail = null;
+      if (cur && cur.type === 'text') cur.lines.push('');
+      else cur = null;
+      return;
+    }
+    // an unprefixed line straight after a detail continues that detail's value
+    if (lastDetail) { lastDetail.value += '\n' + line.trim(); return; }
+    if (!cur || cur.type !== 'text') { cur = { type: 'text', lines: [] }; blocks.push(cur); }
+    cur.lines.push(line);
+  });
+  return blocks;
+}
+
+function renderBulletinMessage(message) {
+  const blocks = parseBulletinMessage(message);
+  if (!blocks.some(b => b.type === 'details')) return `<p>${esc(message || '')}</p>`;
+
+  let signingOff = false;
+  return blocks.map(b => {
+    if (b.type === 'details') {
+      signingOff = false;
+      return `<div class="b-details">` + b.items.map(d => `
+        <div class="b-detail">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${detailIcon(d.label)}</svg>
+          <div>
+            <div class="bd-label">${esc(d.label)}</div>
+            <div class="bd-value">${esc(d.value)}</div>
+          </div>
+        </div>`).join('') + `</div>`;
+    }
+    return b.lines.join('\n').split(/\n{2,}/)
+      .map(para => para.trim())
+      .filter(Boolean)
+      .map(para => {
+        if (SIGNOFF_RE.test(para)) signingOff = true;
+        return `<p${signingOff ? ' class="b-signoff"' : ''}>${esc(para)}</p>`;
+      }).join('');
+  }).join('');
+}
+
 async function loadPublicBulletin() {
   const statusEl = document.getElementById('bulletin-status');
   const list = document.getElementById('bulletin-list');
+  list.innerHTML = skeletonBulletin(2);
   try {
     const data = await jsonp({ action: 'bulletin' });
     statusEl.style.display = 'none';
     const items = data.announcements || [];
     if (items.length === 0) {
-      list.innerHTML = `<p class="hint">No announcements posted right now.</p>`;
+      list.innerHTML = emptyState(
+        'The board is clear',
+        'No notices are posted at the moment. Announcements from the secretary will show up here.'
+      );
       return;
     }
     list.innerHTML = items.map((a, i) => `
-      <div class="bulletin-card${a.pinned ? ' pinned' : ''}" style="animation-delay:${Math.min(i * 60, 480)}ms">
-        <div class="bhead">
-          ${a.pinned ? `<span class="pin-badge"><svg class="icon" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 17v5M8 3h8l-1 7 3 3H6l3-3z"/></svg>Pinned</span>` : ''}
-        </div>
-        <h3>${a.title}</h3>
-        <div class="bdate">${formatBulletinDate(a.datePosted)}</div>
-        <p>${a.message || ''}</p>
-      </div>
+      <article class="bulletin-card${a.pinned ? ' pinned' : ''}" style="animation-delay:${Math.min(i * 60, 480)}ms">
+        ${a.pinned ? `<div class="bhead"><span class="pin-badge"><svg class="icon" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 17v5M8 3h8l-1 7 3 3H6l3-3z"/></svg>Pinned</span></div>` : ''}
+        <h3>${esc(a.title)}</h3>
+        <div class="bdate">${esc(formatBulletinDate(a.datePosted))}</div>
+        ${renderBulletinMessage(a.message)}
+      </article>
     `).join('');
   } catch (err) {
-    statusEl.textContent = 'Could not load the bulletin board right now.';
+    statusEl.style.display = 'none';
+    list.innerHTML = emptyState(
+      'Bulletin unavailable',
+      'The Lodge records could not be reached just now. Refresh the page in a moment, or ask the secretary.',
+      true
+    );
   }
 }
 loadPublicBulletin();
