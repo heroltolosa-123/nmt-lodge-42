@@ -6,6 +6,12 @@
 <title>Noli Me Tangere Lodge No. 42 — Membership &amp; Attendance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- The first data call cannot start until DNS, TCP and TLS are done with
+     Apps Script, and script.google.com always 302s on to googleusercontent,
+     so both hosts are warmed here while the page is still parsing. -->
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<link rel="dns-prefetch" href="https://i.imgur.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
   /* =====================================================================
@@ -1005,7 +1011,7 @@
     </div>
   </div>
 
-  <div class="seal" data-loop><img src="noli-logo.jpg" alt="Noli Me Tangere Lodge No. 42 seal"></div>
+  <div class="seal" data-loop><img src="noli-logo.jpg" alt="Noli Me Tangere Lodge No. 42 seal" width="317" height="320" fetchpriority="high" decoding="async"></div>
   <h1 class="lodge-name">Noli Me Tangere Lodge No. 42</h1>
   <p class="lodge-sub">F. &amp; A.M. · Manila · Instituted 1918</p>
   <p class="lodge-tag" id="lodge-tag"><span id="tag-text">Membership standing and attendance, drawn live from the Lodge secretary's records.</span></p>
@@ -1118,7 +1124,7 @@
   <!-- ===================== ADMIN ===================== -->
   <section id="panel-admin" class="panel" role="tabpanel" tabindex="0" aria-labelledby="tab-admin">
     <div class="card lock-card" id="admin-lock">
-      <div class="seal"><img src="noli-logo.jpg" alt=""></div>
+      <div class="seal"><img src="noli-logo.jpg" alt="" width="317" height="320" loading="lazy" decoding="async"></div>
       <h2 style="margin:0 0 4px;justify-content:center"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Officers' Dashboard</h2>
       <p class="hint">Enter the officers' password to view the full roster and attendance grid.</p>
       <div class="search-row" style="margin-top:14px">
@@ -1458,9 +1464,71 @@ const LINE_PHOTO = {
 
 /* ---------------------------------------------------------------------
    JSONP helper (avoids CORS issues with Apps Script)
+
+   Apps Script sets the floor on how fast this page can feel. A call to
+   script.google.com 302s to googleusercontent and only then runs the
+   script: measured at 1.7-4.5s warm and ~21s on a cold start, for
+   payloads under 2KB. No client change makes one round trip faster, so
+   the work is to make far fewer of them.
+
+   Three layers, all inside this one function so no caller can opt out:
+     - in-flight dedupe, so two loaders asking for the same action
+       (the gallery and the dashboard both want 'activities') share a trip
+     - a session cache, so a reload or a revisited sub-tab paints at once
+     - stale-while-revalidate past the soft TTL, so the copy on screen is
+       instant and a fresh one lands in the cache for next time
+
+   Only the four public reads are cached. 'roster' is deliberately not:
+   it carries the officers' password and member dues, it is fetched once
+   at unlock, and the roll-call and dues sub-tabs already render from the
+   fullRoster array in memory. Every write clears the cache (see
+   postAction) so the secretary never edits against a stale list.
    --------------------------------------------------------------------- */
 let jsonpCounter = 0;
-function jsonp(params) {
+
+const READ_TTL      = 5 * 60 * 1000;    // under this, serve cache, no network
+const READ_MAX_AGE  = 30 * 60 * 1000;   // over this, wait for the network
+const JSONP_TIMEOUT = 25000;            // longer than the worst cold start seen
+const CACHEABLE     = new Set(['officers', 'activities', 'bulletin', 'birthdays']);
+const CACHE_PREFIX  = 'nmt:';
+
+const readCache = new Map();   // action -> { t, data }
+const inflight  = new Map();   // action -> Promise
+
+function readStored(key) {
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;   // private mode, blocked storage, or corrupt entry
+  }
+}
+
+function writeStored(key, entry) {
+  try {
+    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
+  } catch (err) {
+    /* quota or private mode: the in-memory cache still does its job */
+  }
+}
+
+/* Called after every write so an edit is never hidden behind a cached read. */
+function clearReadCache() {
+  readCache.clear();
+  inflight.clear();
+  try {
+    Object.keys(sessionStorage)
+      .filter(k => k.indexOf(CACHE_PREFIX) === 0)
+      .forEach(k => sessionStorage.removeItem(k));
+  } catch (err) {
+    /* nothing was persisted, so nothing to clear */
+  }
+}
+
+/* The original network call, unchanged apart from a timeout: a hung Apps
+   Script used to leave the promise pending forever, which reads on screen
+   as a skeleton that never resolves. */
+function jsonpFetch(params) {
   return new Promise((resolve, reject) => {
     if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
       document.getElementById('config-warning').style.display = 'block';
@@ -1470,15 +1538,56 @@ function jsonp(params) {
     const cbName = 'jsonpCb' + (jsonpCounter++);
     const script = document.createElement('script');
     const query = new URLSearchParams({ ...params, callback: cbName }).toString();
-    window[cbName] = (data) => {
-      resolve(data);
+    let timer = null;
+    const cleanup = () => {
+      clearTimeout(timer);
       delete window[cbName];
       script.remove();
     };
-    script.onerror = () => reject(new Error('Network error contacting the Lodge API'));
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('Network error contacting the Lodge API')); };
+    timer = setTimeout(() => {
+      cleanup();
+      window[cbName] = () => {};   // a reply arriving late must not throw
+      reject(new Error('The Lodge records took too long to answer'));
+    }, JSONP_TIMEOUT);
     script.src = APPS_SCRIPT_URL + '?' + query;
     document.body.appendChild(script);
   });
+}
+
+function jsonp(params) {
+  const key = params.action;
+  if (!CACHEABLE.has(key)) return jsonpFetch(params);
+
+  const refresh = () => {
+    if (inflight.has(key)) return inflight.get(key);
+    const pending = jsonpFetch(params)
+      .then(data => {
+        inflight.delete(key);
+        if (data && !data.error) {
+          const entry = { t: Date.now(), data };
+          readCache.set(key, entry);
+          writeStored(key, entry);
+        }
+        return data;   // an error reply is passed through, never cached
+      })
+      .catch(err => { inflight.delete(key); throw err; });
+    inflight.set(key, pending);
+    return pending;
+  };
+
+  let entry = readCache.get(key);
+  if (!entry) {
+    entry = readStored(key);
+    if (entry) readCache.set(key, entry);
+  }
+
+  if (entry && typeof entry.t === 'number' && Date.now() - entry.t < READ_MAX_AGE) {
+    if (Date.now() - entry.t > READ_TTL) refresh().catch(() => {});
+    return Promise.resolve(entry.data);
+  }
+  return refresh();
 }
 
 /* ---------------------------------------------------------------------
@@ -2368,7 +2477,7 @@ async function loadActivitiesAdmin() {
     }
     list.innerHTML = allActivities.map(a => `
       <div class="activity-row">
-        ${(a.photoUrls && a.photoUrls[0]) ? `<img class="athumb" src="${a.photoUrls[0]}" alt="">` : `<div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-soft)">—</div>`}
+        ${(a.photoUrls && a.photoUrls[0]) ? `<img class="athumb" src="${a.photoUrls[0]}" alt="" loading="lazy" decoding="async">` : `<div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-soft)">—</div>`}
         <div class="ainfo">
           <div class="atitle">${a.title}${a.photoUrls && a.photoUrls.length > 1 ? ` <span class="hint" style="display:inline">(${a.photoUrls.length} photos)</span>` : ''}</div>
           <div class="hint" style="margin:0">${formatActivityDate(a.date)} · ${a.category}</div>
@@ -2393,7 +2502,7 @@ async function loadActivitiesAdmin() {
 function renderActivityPhotoPreview() {
   const urls = document.getElementById('activity-photourls').value.split('\n').map(s => s.trim()).filter(Boolean);
   const preview = document.getElementById('activity-photo-preview');
-  preview.innerHTML = urls.map(u => `<img class="photo-preview-thumb" src="${u}" onerror="this.style.opacity='.25'">`).join('');
+  preview.innerHTML = urls.map(u => `<img class="photo-preview-thumb" src="${u}" loading="lazy" decoding="async" onerror="this.style.opacity='.25'">`).join('');
 }
 document.getElementById('activity-photourls').addEventListener('input', renderActivityPhotoPreview);
 
@@ -2475,7 +2584,7 @@ async function loadOfficersAdmin() {
     }
     list.innerHTML = allOfficers.map(o => `
       <div class="activity-row">
-        ${o.photoUrl ? `<img class="athumb" src="${o.photoUrl}" alt="">` : `<div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-soft)">—</div>`}
+        ${o.photoUrl ? `<img class="athumb" src="${o.photoUrl}" alt="" loading="lazy" decoding="async">` : `<div class="athumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-soft)">—</div>`}
         <div class="ainfo">
           <div class="atitle">${o.fullName}</div>
           <div class="hint" style="margin:0">${o.position} · ${o.term || 'No term set'} · <span class="badge ${o.status === 'Current' ? 'ok' : 'neutral'}">${o.status}</span></div>
@@ -2772,7 +2881,13 @@ async function postAction(payload) {
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
   });
-  return await resp.json();
+  const result = await resp.json();
+  /* Every write goes through here, so this is the one place that has to
+     drop the read cache. Without it the secretary would add an activity
+     and then be handed the pre-add list back from cache. Cleared even on
+     a reported failure, because a partial write still changes the sheet. */
+  clearReadCache();
+  return result;
 }
 
 const STATUS_OPTIONS = ['Regular', 'Dual', 'LML', 'Suspended', 'Expelled', 'Deceased', 'Needs Review', 'Unspecified'];
