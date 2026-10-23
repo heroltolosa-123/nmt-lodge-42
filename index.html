@@ -169,7 +169,7 @@
   }
 
   /* decorative loops idle while they are off screen */
-  .idle, .idle .ember{ animation-play-state:paused !important }
+  .idle, .idle .ember, .idle::before, .idle .seal::before{ animation-play-state:paused !important }
 
   /* raking light across engraved metal */
   .rake{ position:relative; overflow:hidden }
@@ -227,12 +227,15 @@
     margin:0 auto 26px;
     border-radius:50%;
     padding:6px;
-    background:conic-gradient(from 0deg, var(--gold-deep), var(--gold-hi), var(--gold-deep), var(--gold), var(--gold-deep), var(--gold-hi), var(--gold-deep));
     box-shadow:0 0 0 1px var(--line-mid), 0 18px 46px rgba(0,0,0,.7), 0 0 60px -18px var(--gold-glow);
+  }
+  .seal::before{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    background:conic-gradient(from 0deg, var(--gold-deep), var(--gold-hi), var(--gold-deep), var(--gold), var(--gold-deep), var(--gold-hi), var(--gold-deep));
     animation:seal-turn 26s linear infinite;
   }
-  @keyframes seal-turn{ to{ background-image:conic-gradient(from 360deg, var(--gold-deep), var(--gold-hi), var(--gold-deep), var(--gold), var(--gold-deep), var(--gold-hi), var(--gold-deep)) } }
-  .seal img{ width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; background:var(--ink-900) }
+  @keyframes seal-turn{ to{ transform:rotate(360deg) } }
+  .seal img{ position:relative; width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; background:var(--ink-900) }
 
   .lodge-name{
     font-size:clamp(30px, 5.4vw, 52px);
@@ -240,12 +243,7 @@
     color:var(--gold-hi);
     text-transform:uppercase;
     letter-spacing:.05em;
-    text-shadow:0 0 34px rgba(217,180,100,.28);
-    animation:name-breathe 7s ease-in-out infinite;
-  }
-  @keyframes name-breathe{
-    0%,100%{ text-shadow:0 0 34px rgba(217,180,100,.22) }
-    50%{ text-shadow:0 0 46px rgba(217,180,100,.42) }
+    text-shadow:0 0 40px rgba(217,180,100,.34);
   }
   .lodge-sub{
     margin:0; color:var(--text-soft);
@@ -322,7 +320,7 @@
   .hero-skyline{ position:absolute; left:0; right:0; bottom:0; width:100%; height:auto; opacity:.3; color:var(--gold-deep) }
   @media (prefers-reduced-motion: reduce){
     .ember{ display:none }
-    .corner-branch, .seal, .hero-rosette, .lodge-name{ animation:none }
+    .corner-branch, .seal::before, .hero-rosette, .lodge-name{ animation:none }
   }
 
   /* =====================================================================
@@ -335,9 +333,7 @@
   }
   .nav-shell[data-stuck="true"]{
     padding:9px 0 10px;
-    background:linear-gradient(180deg, rgba(7,9,7,.97), rgba(7,9,7,.86));
-    -webkit-backdrop-filter:blur(16px) saturate(1.2);
-            backdrop-filter:blur(16px) saturate(1.2);
+    background:linear-gradient(180deg, rgba(7,9,7,.985), rgba(7,9,7,.94));
     box-shadow:0 1px 0 var(--line-mid), 0 18px 40px rgba(0,0,0,.6);
   }
   .ribbon-nav{
@@ -955,7 +951,8 @@
      OFFICERS' DASHBOARD
      ===================================================================== */
   .lock-card{ max-width:440px; margin:0 auto; text-align:center }
-  .lock-card .seal{ width:72px; height:72px; margin-bottom:18px; animation-duration:40s }
+  .lock-card .seal{ width:72px; height:72px; margin-bottom:18px }
+  .lock-card .seal::before{ animation-duration:40s }
   .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin:0 0 28px }
   .stat-card{
     position:relative; overflow:hidden;
