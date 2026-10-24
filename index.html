@@ -1139,6 +1139,33 @@
   .tl-line li span{ font-family:var(--font-display); font-size:15.5px; letter-spacing:.02em;
     text-transform:none; color:var(--text); min-width:190px }
 
+
+  /* attendance grouped by lodge year (March to February) */
+  .term-list{ margin-top:14px; display:flex; flex-direction:column; gap:14px }
+  .term-block{ padding-top:12px; border-top:1px solid var(--line) }
+  .term-block:first-child{ border-top:0; padding-top:0 }
+  .term-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:8px; flex-wrap:wrap }
+  .term-name{
+    font-family:var(--font-ui); font-size:11.5px; font-weight:700;
+    letter-spacing:.14em; color:var(--gold);
+  }
+  .term-count{ font-family:var(--font-ui); font-size:11px; letter-spacing:.08em; color:var(--text-dim) }
+
+
+  /* The staff door sits beside the tab strip, not inside it. */
+  .nav-shell{ }
+  .nav-aside{ display:flex; justify-content:center; margin-top:9px }
+  .staff-door{ font-size:12px; padding:10px 18px; opacity:.86 }
+  .staff-door:hover{ opacity:1 }
+  .staff-door[aria-expanded="true"]{
+    opacity:1; border-color:var(--line-hi); color:var(--gold-hi);
+    background:linear-gradient(180deg, rgba(217,180,100,.12), rgba(217,180,100,.04));
+  }
+  @media (min-width:860px){
+    .nav-shell{ position:sticky }
+    .nav-aside{ margin-top:10px }
+  }
+
 </style>
 </head>
 <body>
@@ -1222,7 +1249,7 @@
 <div class="nav-shell" id="nav-shell">
 <nav class="ribbon-nav" role="tablist" aria-label="Sections">
   <button class="ribbon-btn main-tab" role="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" tabindex="0" data-panel="lookup">
-    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Find My Status</span>
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>My Status</span>
   </button>
   <button class="ribbon-btn main-tab" role="tab" id="tab-heritage" aria-controls="panel-heritage" aria-selected="false" tabindex="-1" data-panel="heritage">
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Heritage</span>
@@ -1231,16 +1258,17 @@
     <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Activities</span>
   </button>
   <button class="ribbon-btn main-tab" role="tab" id="tab-officers" aria-controls="panel-officers" aria-selected="false" tabindex="-1" data-panel="officers">
-    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Lodge Officers</span>
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Officers</span>
   </button>
   <button class="ribbon-btn main-tab" role="tab" id="tab-bulletin" aria-controls="panel-bulletin" aria-selected="false" tabindex="-1" data-panel="bulletin">
-    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin Board</span>
-  </button>
-  <span class="nav-div" role="none" aria-hidden="true"></span>
-  <button class="ribbon-btn ribbon-btn-ghost main-tab" role="tab" id="tab-admin" aria-controls="panel-admin" aria-selected="false" tabindex="-1" data-panel="admin">
-    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6z"/></svg>Officers' Dashboard</span>
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin</span>
   </button>
 </nav>
+<div class="nav-aside">
+  <button class="ribbon-btn ribbon-btn-ghost staff-door" type="button" id="tab-admin" aria-controls="panel-admin" aria-expanded="false" data-panel="admin">
+    <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Officers' Sign In</span>
+  </button>
+</div>
 </div>
 
 <main>
@@ -2068,12 +2096,21 @@ function toast(message, kind) {
    --------------------------------------------------------------------- */
 const mainTabs = Array.from(document.querySelectorAll('.main-tab'));
 
+const staffDoor = document.getElementById('tab-admin');
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.classList.add('active');
+  // The door is outside the tablist, so its state is tracked separately.
+  if (staffDoor) staffDoor.setAttribute('aria-expanded', name === 'admin' ? 'true' : 'false');
+}
+
 function selectMainTab(btn, moveFocus) {
   mainTabs.forEach(b => { b.setAttribute('aria-selected', 'false'); b.tabIndex = -1; });
   btn.setAttribute('aria-selected', 'true');
   btn.tabIndex = 0;
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+  showPanel(btn.dataset.panel);
   if (moveFocus) btn.focus();
   kindle();
   countUpAll();
@@ -2084,6 +2121,17 @@ function selectMainTab(btn, moveFocus) {
     const top = document.querySelector('main').offsetTop - shell.offsetHeight - 12;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
+}
+
+/* The staff door is a button, not a tab: opening it clears the tab strip's
+   selection so nothing in the public nav claims to be current. */
+if (staffDoor) {
+  staffDoor.addEventListener('click', () => {
+    mainTabs.forEach(b => { b.setAttribute('aria-selected', 'false'); b.tabIndex = -1; });
+    if (mainTabs[0]) mainTabs[0].tabIndex = 0;   // keep one tab stop in the strip
+    showPanel('admin');
+    document.querySelector('main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 }
 
 /* Hero buttons are shortcuts into the tab strip, not a second navigation. */
@@ -2288,18 +2336,77 @@ function avatarHtml(m, sizeClass) {
   return `<div class="${fallbackCls}" role="img" aria-label="${esc(m.fullName)}">${esc(initials(m.fullName))}</div>`;
 }
 
+/* ---------------------------------------------------------------------
+   LODGE YEAR — the line is installed in March, so a term runs from March
+   to the February following it. Attendance is read against that term,
+   not against the calendar year.
+   --------------------------------------------------------------------- */
+const MONTH_INDEX = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
+                      jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+
+function lodgeYearOf(label) {
+  const m = String(label || '').trim().match(/^([A-Za-z]{3})[a-z]*\s+(\d{4})$/);
+  if (!m) return null;
+  const idx = MONTH_INDEX[m[1].toLowerCase()];
+  const year = parseInt(m[2], 10);
+  if (idx === undefined || !year) return null;
+  // January and February still belong to the term installed last March.
+  return idx >= 2 ? year : year - 1;
+}
+
+function lodgeYearLabel(start) {
+  return start + '\u2013' + String(start + 1).slice(-2);
+}
+
+function groupByLodgeYear(months) {
+  const buckets = new Map();
+  (months || []).filter(mo => mo.value).forEach(mo => {
+    const start = lodgeYearOf(mo.month);
+    if (start === null) return;        // an unparseable label is dropped, not guessed at
+    if (!buckets.has(start)) buckets.set(start, []);
+    buckets.get(start).push(mo);
+  });
+  return [...buckets.entries()]
+    .sort((a, b) => b[0] - a[0])       // newest term first
+    .map(([start, entries]) => ({ start, entries }));
+}
+
 function renderDetail(m) {
   document.getElementById('lookup-results').innerHTML = '';
   const minAtt = 6;
-  const attTotal = typeof m.attendanceTotal === 'number' ? m.attendanceTotal : (parseInt(m.attendanceTotal) || 0);
+  // The ring says "this term", so it has to count this term. The sheet's
+  // attendanceTotal column is a formula that counts on some other basis —
+  // for one member it reads 4 while the current lodge year holds 1 — so
+  // using it here made the ring contradict its own caption. Counted from
+  // the same attendance records the chips below are drawn from.
+  const terms = groupByLodgeYear(m.months || []);
+  const currentTerm = terms.length ? terms[0] : null;
+  const attTotal = currentTerm
+    ? currentTerm.entries.filter(e => (e.value || '').toString().toUpperCase() === 'C').length
+    : 0;
+  const termName = currentTerm ? lodgeYearLabel(currentTerm.start) : '';
   const pct = Math.max(0, Math.min(100, Math.round((attTotal / minAtt) * 100)));
-  const monthsHtml = (m.months || [])
-    .filter(mo => mo.value)
-    .slice(-12)
-    .map(mo => {
-      const v = (mo.value || '').toString().toUpperCase();
-      const cls = v === 'C' ? 'present' : (v === 'NO' || v === 'NC' ? 'partial' : '');
-      return `<span class="month-chip ${cls}">${esc(mo.month)}: ${esc(mo.value)}</span>`;
+  // Attendance belongs to a lodge year, not a calendar year: the line is
+  // installed in March, so March 2026 and February 2027 are the same term
+  // while January and March 2026 are not. Grouping by "the last 12 entries"
+  // cut straight through an installation and made two terms look like one.
+  const monthsHtml = groupByLodgeYear(m.months || [])
+    .slice(0, 3)
+    .map(({ start, entries }) => {
+      const chips = entries.map(mo => {
+        const v = (mo.value || '').toString().toUpperCase();
+        const cls = v === 'C' ? 'present' : (v === 'NO' || v === 'NC' ? 'partial' : '');
+        return `<span class="month-chip ${cls}">${esc(mo.month)}: ${esc(mo.value)}</span>`;
+      }).join('');
+      const present = entries.filter(e => (e.value || '').toString().toUpperCase() === 'C').length;
+      return `
+        <div class="term-block">
+          <div class="term-head">
+            <span class="term-name">${esc(lodgeYearLabel(start))}</span>
+            <span class="term-count">${present} attended</span>
+          </div>
+          <div class="month-strip">${chips}</div>
+        </div>`;
     }).join('');
 
   document.getElementById('lookup-detail').innerHTML = `
@@ -2308,10 +2415,10 @@ function renderDetail(m) {
         ${avatarHtml(m)}
         <div>
           <div class="ring" style="--pct:0" data-draw="${pct}" role="img"
-               aria-label="${attTotal || 0} of ${minAtt} meetings attended this term">
+               aria-label="${attTotal || 0} of ${minAtt} meetings attended in the ${esc(termName || 'current')} lodge year">
             <b data-countup="${attTotal || 0}">${attTotal || 0}</b><span>ATTEND.</span>
           </div>
-          <div class="ring-caption">of ${minAtt} this term</div>
+          <div class="ring-caption">of ${minAtt}${termName ? ` &middot; ${esc(termName)}` : ' this term'}</div>
         </div>
         <div>
           <h3>${esc(m.fullName)}</h3>
@@ -2325,7 +2432,7 @@ function renderDetail(m) {
         <div class="stat"><div class="label">Qualified to Vote</div><div class="value">${ynIcon(m.qualifiedToVote)} ${esc(m.qualifiedToVote || '—')}</div></div>
         <div class="stat"><div class="label">Outstanding Dues</div><div class="value">${m.arrears ? '\u20B1' + Number(m.arrears).toLocaleString() : '\u20B10'}</div></div>
       </div>
-      ${monthsHtml ? `<div class="month-strip">${monthsHtml}</div>` : ''}
+      ${monthsHtml ? `<div class="term-list">${monthsHtml}</div>` : ''}
       ${m.attendanceRemarks ? `<p class="hint" style="margin-top:16px">Note: ${esc(m.attendanceRemarks)}</p>` : ''}
     </div>
   `;
