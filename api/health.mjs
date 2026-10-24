@@ -53,5 +53,41 @@ export default async function handler(req, res) {
   }
   out.readyToSignIn = out.sessionSecret.set &&
     Object.values(out.chairs).some(c => c.ok);
+
+  /* ?check=upstream also asks Apps Script whether LODGE_ADMIN_KEY is the
+     password it expects. Opt-in, because it costs a 3-4s round trip and
+     this endpoint is otherwise instant. Reports only whether the key was
+     accepted — never the key, never a member. */
+  const wantsUpstream = /[?&]check=upstream/.test(req.url || '');
+  if (wantsUpstream) {
+    if (!process.env.APPS_SCRIPT_URL || !process.env.LODGE_ADMIN_KEY) {
+      out.upstream = { checked: false, reason: 'APPS_SCRIPT_URL or LODGE_ADMIN_KEY not set' };
+    } else {
+      try {
+        const url = process.env.APPS_SCRIPT_URL
+          + '?action=roster&key=' + encodeURIComponent(process.env.LODGE_ADMIN_KEY);
+        const r = await fetch(url, { redirect: 'follow' });
+        const text = await r.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch { /* Apps Script returned a page, not JSON */ }
+
+        if (!data) {
+          out.upstream = { checked: true, keyAccepted: false,
+            reason: 'Apps Script did not return JSON. Is the /exec URL correct and the deployment public?' };
+        } else if (data.error) {
+          out.upstream = { checked: true, keyAccepted: false, appsScriptSaid: data.error,
+            reason: data.error === 'Unauthorized'
+              ? 'Apps Script rejected the key. LODGE_ADMIN_KEY in Vercel must match ADMIN_KEY in Script Properties exactly.'
+              : 'Apps Script returned an error.' };
+        } else {
+          out.upstream = { checked: true, keyAccepted: true,
+            rosterRows: Array.isArray(data.roster) ? data.roster.length : 0 };
+        }
+      } catch (err) {
+        out.upstream = { checked: true, keyAccepted: false, reason: 'Could not reach Apps Script.' };
+      }
+    }
+  }
+
   json(res, 200, out);
 }

@@ -3409,7 +3409,12 @@ async function unlockAdmin() {
         const who = await res.json();
         currentRole = who.role;
         const roster = await postAction({ action: 'roster' });
-        if (roster.error) { msg.textContent = 'Signed in, but the roster could not be read.'; return; }
+        if (roster.error) {
+          // Say which half failed. "Could not be read" sent the Secretary
+          // looking at their password, which had just been accepted.
+          msg.textContent = 'Signed in, but the roster could not be read: ' + roster.error;
+          return;
+        }
         fullRoster = roster.roster || [];
         msg.textContent = '';
         showSignedIn(who.label);
