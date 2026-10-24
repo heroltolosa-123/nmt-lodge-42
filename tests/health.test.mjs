@@ -32,3 +32,13 @@ console.log('PASS  correct hash reported ok');
 console.log('PASS  pasted password, truncated hash and stray whitespace each named');
 console.log('PASS  no secret value appears in the response');
 console.log('\nall checks passed');
+
+// the commonest paste error: hash with the scrypt: tag chopped off
+process.env.PW_WM = good.slice('scrypt:'.length);
+const res2 = { headers:{}, statusCode:0, body:null, setHeader(){}, end(b){this.body=JSON.parse(b)} };
+const { default: h2 } = await import('../api/health.mjs?v=2');
+await h2({}, res2);
+assert.strictEqual(res2.body.chairs.wm.length, 161, 'a de-prefixed hash is 161 characters');
+assert.ok(/prefix is missing/.test(res2.body.chairs.wm.problem),
+  'a de-prefixed hash must be named exactly, not called a plain password');
+console.log('PASS  a hash missing its scrypt: prefix is diagnosed precisely');

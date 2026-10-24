@@ -18,6 +18,14 @@ function describeHash(v) {
   if (s !== String(v)) return { set: true, problem: 'has leading or trailing whitespace' };
   const parts = s.split(':');
   if (parts[0] !== 'scrypt') {
+    // The commonest paste error by a distance: the value is a perfectly
+    // good hash with the seven-character "scrypt:" tag missing from the
+    // front, usually because the selection started after the colon.
+    if (parts.length === 2 && /^[0-9a-f]{32}$/.test(parts[0]) && /^[0-9a-f]{128}$/.test(parts[1])) {
+      return { set: true, length: s.length,
+               problem: 'the "scrypt:" prefix is missing — the rest is correct. Put scrypt: at the front of this value.',
+               fix: 'scrypt:' + '…' };
+    }
     return { set: true, length: s.length,
              problem: 'does not start with "scrypt:" — this looks like a plain password, not a hash' };
   }
