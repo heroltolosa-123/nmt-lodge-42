@@ -58,7 +58,10 @@ export default async function handler(req, res) {
      password it expects. Opt-in, because it costs a 3-4s round trip and
      this endpoint is otherwise instant. Reports only whether the key was
      accepted — never the key, never a member. */
-  const wantsUpstream = /[?&]check=upstream/.test(req.url || '');
+  // Vercel populates req.query; req.url may or may not carry the string,
+  // so read both rather than depending on which.
+  const wantsUpstream = (req.query && req.query.check === 'upstream')
+    || /[?&]check=upstream/.test(req.url || '');
   if (wantsUpstream) {
     if (!process.env.APPS_SCRIPT_URL || !process.env.LODGE_ADMIN_KEY) {
       out.upstream = { checked: false, reason: 'APPS_SCRIPT_URL or LODGE_ADMIN_KEY not set' };
