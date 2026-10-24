@@ -1166,6 +1166,31 @@
     .nav-aside{ margin-top:10px }
   }
 
+
+  .lock-form{ display:flex; flex-direction:column; gap:12px; text-align:left }
+  .lock-field{ display:flex; flex-direction:column; gap:6px }
+  .lock-field > span{
+    font-family:var(--font-ui); font-size:10.5px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  .lock-field select, .lock-field input{
+    width:100%; padding:11px 13px; border-radius:3px;
+    background:var(--ink-800); border:1px solid var(--line-mid);
+    color:var(--text); font-family:var(--font-body); font-size:16px;
+  }
+  .lock-field select:focus, .lock-field input:focus{
+    outline:none; border-color:var(--line-hi); box-shadow:0 0 0 3px rgba(217,180,100,.08);
+  }
+  .signed-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    flex-wrap:wrap; margin:0 0 18px; padding:10px 14px;
+    border:1px solid var(--line-mid); border-radius:3px;
+    background:rgba(217,180,100,.05);
+    font-family:var(--font-ui); font-size:12.5px; color:var(--text-soft);
+  }
+  .signed-bar strong{ color:var(--gold-hi) }
+  .btn-sm{ padding:7px 14px; font-size:11.5px }
+
 </style>
 </head>
 <body>
@@ -1463,13 +1488,22 @@
     <div class="card lock-card" id="admin-lock">
       <div class="seal"><img src="noli-logo.jpg" alt="" width="317" height="320" loading="lazy" decoding="async"></div>
       <h2 style="margin:0 0 4px;justify-content:center"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Officers' Dashboard</h2>
-      <p class="hint">Enter the officers' password to view the full roster and attendance grid.</p>
-      <div class="search-row" style="margin-top:14px">
-        <div class="search-wrap">
-          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <input type="password" id="admin-pass" placeholder="Password">
-        </div>
-        <button class="btn" id="admin-unlock-btn">Unlock</button>
+      <p class="hint">Sign in with your chair and password to view the full roster and attendance grid.</p>
+      <div class="lock-form" style="margin-top:14px">
+        <label class="lock-field" id="role-field">
+          <span>Your chair</span>
+          <select id="admin-role">
+            <option value="secretary">Secretary</option>
+            <option value="wm">Worshipful Master</option>
+            <option value="sw">Senior Warden</option>
+            <option value="jw">Junior Warden</option>
+          </select>
+        </label>
+        <label class="lock-field">
+          <span>Password</span>
+          <input type="password" id="admin-pass" autocomplete="current-password" placeholder="Password">
+        </label>
+        <button class="btn" id="admin-unlock-btn">Sign In</button>
       </div>
       <div id="admin-lock-msg" class="hint"></div>
     </div>
@@ -3018,6 +3052,12 @@ async function loadPublicBulletin() {
 }
 loadPublicBulletin();
 
+/* The search function holds the roster for five minutes per warm instance.
+   Touching it on load means the first brother to search usually finds it
+   already warm, instead of waiting out a cold start. Ignored on failure:
+   this is a nicety, not a dependency. */
+fetch('/api/search?q=__warm').catch(() => {});
+
 /* ---------------------------------------------------------------------
    ACTIVITIES — officer management (list, add, edit, delete)
    --------------------------------------------------------------------- */
@@ -3322,25 +3362,101 @@ async function deleteAnnouncementConfirm(announcementId) {
    --------------------------------------------------------------------- */
 let fullRoster = [];
 
+/* Set once we know whether the Vercel API is configured. While it is not,
+   the dashboard keeps working the old way so the Lodge is never locked
+   out mid-migration. */
+let apiAuthAvailable = null;
+let currentRole = null;
+
+function enterDashboard() {
+  document.getElementById('admin-lock').style.display = 'none';
+  document.getElementById('admin-content').style.display = 'block';
+  renderAdmin();
+}
+
 async function unlockAdmin() {
   const pass = document.getElementById('admin-pass').value;
+  const role = document.getElementById('admin-role').value;
   const msg = document.getElementById('admin-lock-msg');
-  msg.innerHTML = '<span class="spinner"></span>Checking…';
+  msg.innerHTML = '<span class="spinner"></span>Signing in…';
+
+  // --- preferred: sign in through Vercel, password never reaches Apps Script
+  if (apiAuthAvailable !== false) {
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, password: pass })
+      });
+      // Only a 401 means the credentials were wrong. A 404 means the
+      // function was never deployed and a 5xx means it is broken — in
+      // both cases the Lodge must fall through to the old path, not be
+      // told its password is wrong and left with no way in.
+      if (res.status === 401) {
+        apiAuthAvailable = true;
+        msg.textContent = 'Incorrect chair or password.';
+        return;
+      }
+      if (res.status === 429) {
+        apiAuthAvailable = true;
+        msg.textContent = 'Too many attempts. Wait a few minutes.';
+        return;
+      }
+      if (!res.ok) {
+        apiAuthAvailable = false;              // not deployed, or unwell
+      } else {
+        apiAuthAvailable = true;
+        const who = await res.json();
+        currentRole = who.role;
+        const roster = await postAction({ action: 'roster' });
+        if (roster.error) { msg.textContent = 'Signed in, but the roster could not be read.'; return; }
+        fullRoster = roster.roster || [];
+        msg.textContent = '';
+        showSignedIn(who.label);
+        enterDashboard();
+        return;
+      }
+    } catch (err) {
+      apiAuthAvailable = false;                // offline or blocked; fall through
+    }
+  }
+
+  // --- fallback: the original shared-password path
   try {
     const data = await jsonp({ action: 'roster', key: pass });
-    if (data.error) {
-      msg.textContent = 'Incorrect password.';
-      return;
-    }
+    if (data.error) { msg.textContent = 'Incorrect password.'; return; }
     fullRoster = data.roster || [];
     msg.textContent = '';
-    document.getElementById('admin-lock').style.display = 'none';
-    document.getElementById('admin-content').style.display = 'block';
     sessionStorage.setItem('nmt_admin_key', pass);
-    renderAdmin();
+    enterDashboard();
   } catch (err) {
     msg.textContent = err.message;
   }
+}
+
+function showSignedIn(label) {
+  let bar = document.getElementById('signed-in-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'signed-in-bar';
+    bar.className = 'signed-bar';
+    const content = document.getElementById('admin-content');
+    content.insertBefore(bar, content.firstChild);
+  }
+  bar.innerHTML = `<span>Signed in as <strong>${esc(label)}</strong></span>` +
+                  `<button class="btn btn-sm" type="button" id="sign-out-btn">Sign out</button>`;
+  document.getElementById('sign-out-btn').addEventListener('click', signOut);
+}
+
+async function signOut() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch (err) { /* clear locally anyway */ }
+  sessionStorage.removeItem('nmt_admin_key');
+  currentRole = null;
+  fullRoster = [];
+  document.getElementById('admin-content').style.display = 'none';
+  document.getElementById('admin-lock').style.display = 'block';
+  document.getElementById('admin-pass').value = '';
+  toast('Signed out.', 'ok');
 }
 document.getElementById('admin-unlock-btn').addEventListener('click', unlockAdmin);
 document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.key === 'Enter') unlockAdmin(); });
@@ -3433,13 +3549,41 @@ document.getElementById('admin-vote-filter').addEventListener('change', renderTa
 function adminKey() { return sessionStorage.getItem('nmt_admin_key') || ''; }
 
 async function postAction(payload) {
-  payload.key = adminKey();
-  const resp = await fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  });
-  const result = await resp.json();
+  let result;
+
+  // --- preferred: through Vercel, which holds the key server side
+  if (apiAuthAvailable !== false) {
+    try {
+      const res = await fetch('/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok && res.status !== 401) {
+        apiAuthAvailable = false;            // not configured, not deployed, or unwell
+      } else if (res.status === 401) {
+        clearReadCache();
+        toast('Your session has expired. Please sign in again.', 'bad');
+        return { error: 'Session expired. Sign in again.' };
+      } else {
+        apiAuthAvailable = true;
+        result = await res.json();
+      }
+    } catch (err) {
+      apiAuthAvailable = false;              // offline or blocked; fall through
+    }
+  }
+
+  // --- fallback: the original path, with the key from this session
+  if (result === undefined) {
+    payload.key = adminKey();
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    result = await resp.json();
+  }
   /* Every write goes through here, so this is the one place that has to
      drop the read cache. Without it the secretary would add an activity
      and then be handed the pre-add list back from cache. Cleared even on
@@ -3451,7 +3595,9 @@ async function postAction(payload) {
 const STATUS_OPTIONS = ['Regular', 'Dual', 'LML', 'Suspended', 'Expelled', 'Deceased', 'Needs Review', 'Unspecified'];
 
 async function refreshRoster() {
-  const data = await jsonp({ action: 'roster', key: adminKey() });
+  const data = apiAuthAvailable
+    ? await postAction({ action: 'roster' })
+    : await jsonp({ action: 'roster', key: adminKey() });
   if (!data.error) { fullRoster = data.roster || []; renderAdmin(); }
 }
 

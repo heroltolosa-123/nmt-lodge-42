@@ -34,3 +34,92 @@ export function json(res, status, body, cacheControl) {
   res.setHeader('Cache-Control', cacheControl || 'no-store');
   res.end(JSON.stringify(body));
 }
+
+/* =====================================================================
+   SESSIONS
+
+   Four accounts, keyed to the chair rather than the person, so an
+   installation in March is a password handover and not four new
+   accounts. Passwords are scrypt hashes in the Vercel environment:
+   a leak of those settings must not hand someone a password that an
+   officer also used on their email.
+   ===================================================================== */
+import crypto from 'node:crypto';
+
+export const ROLES = {
+  wm:        { label: 'Worshipful Master', env: 'PW_WM' },
+  sw:        { label: 'Senior Warden',     env: 'PW_SW' },
+  jw:        { label: 'Junior Warden',     env: 'PW_JW' },
+  secretary: { label: 'Secretary',         env: 'PW_SECRETARY' }
+};
+
+const SESSION_COOKIE = 'nmt_session';
+const SESSION_HOURS  = 8;
+
+export function hashPassword(plain) {
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.scryptSync(String(plain), salt, 64);
+  return 'scrypt:' + salt.toString('hex') + ':' + hash.toString('hex');
+}
+
+export function verifyPassword(plain, stored) {
+  const parts = String(stored || '').split(':');
+  if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
+  let expected;
+  try { expected = Buffer.from(parts[2], 'hex'); } catch { return false; }
+  if (!expected.length) return false;
+  const actual = crypto.scryptSync(String(plain), Buffer.from(parts[1], 'hex'), expected.length);
+  // Length is equal by construction, but timingSafeEqual throws if it is not.
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+}
+
+const b64u = buf => Buffer.from(buf).toString('base64url');
+
+export function signToken(payload, secret) {
+  const body = b64u(JSON.stringify(payload));
+  const sig  = b64u(crypto.createHmac('sha256', secret).update(body).digest());
+  return body + '.' + sig;
+}
+
+export function verifyToken(token, secret) {
+  const [body, sig] = String(token || '').split('.');
+  if (!body || !sig) return null;
+  const expected = b64u(crypto.createHmac('sha256', secret).update(body).digest());
+  const a = Buffer.from(sig), b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  let payload;
+  try { payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')); }
+  catch { return null; }
+  if (!payload || typeof payload.exp !== 'number' || Date.now() > payload.exp) return null;
+  if (!ROLES[payload.role]) return null;
+  return payload;
+}
+
+export function sessionCookie(token) {
+  // HttpOnly so no page script can read it, which is what keeps an XSS
+  // from walking off with an officer's session.
+  const age = token ? SESSION_HOURS * 3600 : 0;
+  return SESSION_COOKIE + '=' + (token || '') +
+    '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=' + age;
+}
+
+export function readSession(req, secret) {
+  const raw = req.headers?.cookie || '';
+  const hit = raw.split(';')
+    .map(c => c.trim())
+    .find(c => c.startsWith(SESSION_COOKIE + '='));
+  if (!hit) return null;
+  return verifyToken(hit.slice(SESSION_COOKIE.length + 1), secret);
+}
+
+export function newSession(role) {
+  return { role, exp: Date.now() + SESSION_HOURS * 3600 * 1000 };
+}
+
+export async function readBody(req) {
+  if (req.body) return typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  const text = Buffer.concat(chunks).toString('utf8');
+  return text ? JSON.parse(text) : {};
+}
