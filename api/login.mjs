@@ -7,8 +7,8 @@ import { ROLES, requireEnv, verifyPassword, signToken, newSession,
    ponytail: per-instance, swap for a KV counter if the lodge ever grows
    past a handful of officers. */
 const attempts = new Map();
-const WINDOW = 15 * 60 * 1000;
-const MAX_TRIES = 8;
+const WINDOW = 10 * 60 * 1000;
+const MAX_TRIES = 10;
 
 function tooMany(ip) {
   const now = Date.now();
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   catch (e) { return json(res, 503, { error: 'not_configured', missing: String(e.message).split(':')[1] }); }
 
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
-  if (tooMany(ip)) return json(res, 429, { error: 'too_many_attempts' });
+  if (tooMany(ip)) return json(res, 429, { error: 'too_many_attempts', retryAfterMinutes: 10 });
 
   let body;
   try { body = await readBody(req); } catch { return json(res, 400, { error: 'bad_request' }); }
