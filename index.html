@@ -2300,7 +2300,7 @@ async function runLookup() {
   }
   statusEl.innerHTML = '<span class="spinner"></span>Searching…';
   try {
-    const data = await jsonp({ action: 'lookup', q });
+    const data = await lookupMember(q);
     statusEl.textContent = '';
     if (!data.matches || data.matches.length === 0) {
       statusEl.textContent = 'No matching member found. Check the spelling, or ask the secretary.';
@@ -2334,6 +2334,42 @@ function avatarHtml(m, sizeClass) {
            `<div class="${fallbackCls}" style="display:none" aria-hidden="true">${esc(initials(m.fullName))}</div>`;
   }
   return `<div class="${fallbackCls}" role="img" aria-label="${esc(m.fullName)}">${esc(initials(m.fullName))}</div>`;
+}
+
+/* ---------------------------------------------------------------------
+   MEMBER SEARCH — two routes to the same answer.
+
+   The fast one is /api/search on Vercel, which holds the roster server
+   side and returns only the matches. The slow one is the Apps Script
+   lookup, which is a 3-4s round trip per search.
+
+   The fast route is tried first and the slow one catches it, so the page
+   works whether or not the Vercel environment has been configured yet.
+   Once /api/search answers, it is used for the rest of the session; a
+   503 means it is not set up, and there is no point asking again.
+   --------------------------------------------------------------------- */
+let apiSearchAvailable = true;
+
+async function lookupMember(q) {
+  if (apiSearchAvailable) {
+    try {
+      const res = await fetch('/api/search?q=' + encodeURIComponent(q), {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.status === 503) {
+        apiSearchAvailable = false;          // not configured; stop trying
+      } else if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.matches)) return data;
+      } else {
+        // A 502 is the upstream being slow or sulking, not a missing
+        // setup, so the fast route stays enabled for the next search.
+      }
+    } catch (err) {
+      /* offline, blocked, or the function is cold — fall through */
+    }
+  }
+  return jsonp({ action: 'lookup', q });
 }
 
 /* ---------------------------------------------------------------------
