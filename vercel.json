@@ -10,5 +10,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/*.mjs": {
+      "maxDuration": 30
+    }
+  }
 }

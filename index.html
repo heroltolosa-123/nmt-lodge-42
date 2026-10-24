@@ -3367,6 +3367,7 @@ let fullRoster = [];
    out mid-migration. */
 let apiAuthAvailable = null;
 let currentRole = null;
+let usingApiSession = false;   // true once /api/login has issued a cookie
 
 function enterDashboard() {
   document.getElementById('admin-lock').style.display = 'none';
@@ -3386,6 +3387,7 @@ async function unlockAdmin() {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',          // so the Set-Cookie is kept
         body: JSON.stringify({ role, password: pass })
       });
       // Only a 401 means the credentials were wrong. A 404 means the
@@ -3406,6 +3408,7 @@ async function unlockAdmin() {
         apiAuthAvailable = false;              // not deployed, or unwell
       } else {
         apiAuthAvailable = true;
+        usingApiSession = true;
         const who = await res.json();
         currentRole = who.role;
         const roster = await postAction({ action: 'roster' });
@@ -3562,8 +3565,16 @@ async function postAction(payload) {
       const res = await fetch('/api/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',          // explicit: the session cookie must ride along
         body: JSON.stringify(payload)
       });
+      if (!res.ok && res.status !== 401 && usingApiSession) {
+        // Signed in through the API, so the old path cannot help — it has
+        // no key. Report what actually happened instead of disguising it.
+        let detail = '';
+        try { detail = (await res.json()).error || ''; } catch { /* not JSON */ }
+        return { error: 'Server returned ' + res.status + (detail ? ' (' + detail + ')' : '') };
+      }
       if (!res.ok && res.status !== 401) {
         apiAuthAvailable = false;            // not configured, not deployed, or unwell
       } else if (res.status === 401) {
