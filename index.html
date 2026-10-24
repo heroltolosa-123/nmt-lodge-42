@@ -1105,6 +1105,40 @@
 
   .report-row{ display:flex; flex-wrap:wrap; gap:11px; margin-top:16px }
 
+
+  /* ---------------- CHARTER PLATE ----------------
+     A document scan on a dark page needs a mount, not a border: the paper
+     sits on its own light ground so it reads as an artefact on the page. */
+  .charter{ margin:34px auto; max-width:620px; text-align:center }
+  .charter a{
+    display:block; border:1px solid var(--line-mid); padding:10px;
+    background:linear-gradient(180deg, rgba(217,180,100,.07), rgba(217,180,100,.02));
+    transition:border-color .3s var(--ease), box-shadow .4s var(--ease), transform .4s var(--ease);
+  }
+  .charter a:hover{
+    border-color:var(--line-hi); transform:translateY(-2px);
+    box-shadow:0 22px 50px -24px rgba(0,0,0,.9), 0 0 40px -22px var(--gold-glow);
+  }
+  .charter a:focus-visible{ outline:2px solid var(--gold-hi); outline-offset:3px }
+  .charter img{ width:100%; height:auto; display:block }
+  .charter figcaption{
+    margin-top:14px; color:var(--text-soft); font-size:14px; line-height:1.68; text-align:left;
+  }
+  .charter figcaption strong{ color:var(--gold-hi); font-weight:600 }
+  .cap-hint{ display:block; margin-top:6px; color:var(--text-dim); font-size:12.5px; font-family:var(--font-ui) }
+  @media (prefers-reduced-motion:reduce){ .charter a:hover{ transform:none } }
+
+  /* the first line of officers, as the charter appoints them */
+  .tl-line{ list-style:none; margin:10px 0 0; padding:0 }
+  .tl-line li{
+    display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline;
+    padding:6px 0; border-top:1px solid var(--line);
+    font-family:var(--font-ui); font-size:12.5px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  .tl-line li span{ font-family:var(--font-display); font-size:15.5px; letter-spacing:.02em;
+    text-transform:none; color:var(--text); min-width:190px }
+
 </style>
 </head>
 <body>
@@ -1249,25 +1283,45 @@
       <p>Noli Me Tangere Lodge takes its name from the novel that José Rizal published in 1887 &mdash; a book that named what colonial Philippines would not say aloud, and that cost its author his life nine years later. The Lodge was organised in Pasay in 1917 by thirteen Masons, and constituted the following March by Manuel L. Quezon, then Grand Master, who would later become the first President of the Philippine Commonwealth.</p>
       <p>What follows is the Lodge's documented history, including the parts that are not a straight line. It went bankrupt in the 1930s, lost its charter, failed twice to revive, and was eventually re-chartered under a different number. That record is set out below as the Grand Lodge sets it out, rather than smoothed into a continuous institutional story.</p>
       <div class="rule-wrap rake"><svg class="rule" viewBox="0 -12 240 24" preserveAspectRatio="none" aria-hidden="true"><use href="#orn-lathe"/></svg></div>
-      <p class="hint" style="margin-bottom:0">Every date and name on this page comes from the Lodge's entry in the Grand Lodge of the Philippines directory, linked at the foot of this page. Anything the Grand Lodge does not record is marked as unresolved rather than filled in.</p>
+      <p class="hint" style="margin-bottom:0">The dates and names on this page come from two sources: the Lodge's own charter of 1918, reproduced below, and the Lodge's entry in the Grand Lodge of the Philippines directory, linked at the foot of this page. Anything neither source records is marked as unresolved rather than filled in.</p>
     </div>
+
+    <figure class="charter" data-kindle>
+      <a href="charter-1918.webp" target="_blank" rel="noopener noreferrer"
+         aria-label="Open the 1918 charter at full size in a new tab">
+        <img src="charter-1918.webp" width="1000" height="1413" loading="lazy" decoding="async"
+             alt="The 1918 charter of Noli Me Tangere Lodge No. 42, issued by the Grand Lodge of Free and Accepted Masons of the Philippines, signed by Grand Master Manuel L. Quezon and attested by Grand Secretary Newton C. Comfort.">
+      </a>
+      <figcaption>
+        <strong>The charter, 18 March 1918.</strong> Granted by the Grand Lodge of Free and Accepted Masons
+        of the Philippines to the brethren of the Town of Pasay, Province of Rizal, on the dispensation of
+        13 August 1917. Signed by Grand Master Manuel L. Quezon, attested by Grand Secretary Newton C.
+        Comfort, PGM, and sealed. <span class="cap-hint">Select the charter to read it at full size.</span>
+      </figcaption>
+    </figure>
 
     <h3 class="h-sec tl-title" data-kindle>Timeline</h3>
     <ol class="timeline">
 
       <li class="tl-item" data-kindle><div class="tl-year">1917</div><div class="tl-body">
         <h4>Dispensation</h4>
-        <p>On <strong>13 August</strong>, Grand Master William H. Taylor issues a dispensation to thirteen Masons to organise a lodge in Pasay, Rizal. The first meeting is held the same day.</p>
+        <p>On <strong>13 August</strong> &mdash; <em>A.L. 5917</em>, as the charter records it &mdash; Grand Master William H. Taylor issues a dispensation to thirteen Masons to assemble as a Lodge in the <strong>Town of Pasay, Province of Rizal</strong>. The first meeting is held the same day.</p>
       </div></li>
 
       <li class="tl-item" data-kindle><div class="tl-year">1918</div><div class="tl-body">
         <h4>Chartered and constituted</h4>
-        <p>The charter is issued at the Grand Lodge annual communication in <strong>January</strong>. On <strong>18 March</strong>, Grand Master <strong>Manuel L. Quezon</strong> constitutes the Lodge at the Blue Lodge Hall of the Masonic Temple on the Escolta, Manila. <strong>Manuel de Santos</strong> is installed as its first Master.</p>
+        <p>The Grand Lodge grants the charter at its annual communication in <strong>January</strong>. The instrument itself is executed at the City of Manila on <strong>18 March 1918</strong> &mdash; <em>Anno Lucis 5918</em> &mdash; signed by Grand Master <strong>Manuel L. Quezon</strong> and attested by Grand Secretary <strong>Newton C. Comfort, PGM</strong>. It names the Lodge, in full, <em>Noli Me Tangere Lodge No. 42, F.&nbsp;&amp;&nbsp;A.M.</em></p>
+        <p>The same day, Quezon constitutes the Lodge at the Blue Lodge Hall of the Masonic Temple on the Escolta. The charter appoints the first line:</p>
+        <ul class="tl-line">
+          <li><span>Manuel de Santos</span> Worshipful Master</li>
+          <li><span>Adam T. Tanner</span> Senior Warden</li>
+          <li><span>Dionisio San Agustin</span> Junior Warden</li>
+        </ul>
       </div></li>
 
       <li class="tl-item" data-kindle><div class="tl-year">1920s</div><div class="tl-body">
         <h4>Growth</h4>
-        <p>Membership rises toward <strong>two hundred</strong>. Dionisio San Agustin serves as Master in 1921, 1922, 1927 and 1928.</p>
+        <p>Membership rises toward <strong>two hundred</strong>. Dionisio San Agustin, named Junior Warden on the charter, goes on to serve as Master in 1921, 1922, 1927 and 1928.</p>
       </div></li>
 
       <li class="tl-item" data-kindle><div class="tl-year">1931<span>&ndash;33</span></div><div class="tl-body">
@@ -1309,8 +1363,9 @@
 
     <div class="card card-note" data-kindle>
       <h3 class="h-sec">On the number</h3>
-      <p>This Lodge is known today as <strong>No. 42</strong>, and the Grand Lodge directory lists it under that number. The narrative on that same page, however, records that the 1957 proceedings dissolved the original No.&nbsp;42 and chartered the Lodge as No.&nbsp;148, and that the 1990 decree restoring No.&nbsp;42 was rejected at the Annual Communication that April.</p>
-      <p>The published sources do not resolve how the Lodge came to carry No.&nbsp;42 again afterwards. A separate Grand Lodge page refers to No.&nbsp;148 having regained &ldquo;its old number, namely, 42&rdquo;, without giving a date or an authority for it.</p>
+      <p>The charter above is the Lodge's founding instrument, and it reads <strong>No. 42</strong> in Quezon's own grant. It settles what the Lodge was chartered as in 1918. It does not, on its own, settle what the Lodge is numbered now &mdash; that question turns on what came after it.</p>
+      <p>The Grand Lodge directory lists this Lodge as <strong>No. 42</strong> today. The narrative on that same page records that the charter above was arrested in 1934, that the 1957 proceedings treated the Lodge as newly constituted and <strong>dissolved the former No.&nbsp;42</strong>, chartering it as No.&nbsp;148, and that the 1990 decree restoring No.&nbsp;42 was rejected at the Annual Communication that April.</p>
+      <p>How the Lodge came to carry No.&nbsp;42 again after that is not explained in any source we have found. A separate Grand Lodge page refers to No.&nbsp;148 having regained &ldquo;its old number, namely, 42&rdquo;, without giving a date or an authority.</p>
       <p style="margin-bottom:0">We set this out rather than choose a version. Brethren who want the full proceedings should consult the Grand Secretary; corrections from the Grand Lodge are welcome and will be reflected here.</p>
     </div>
   </section>
@@ -1706,7 +1761,8 @@
       <h4>References</h4>
       <p><a href="https://www.grandlodge.ph/lodges/noli-me-tangere" target="_blank" rel="noopener noreferrer">Grand Lodge of the Philippines &mdash; Lodge directory entry</a></p>
       <p><a href="https://www.grandlodge.ph" target="_blank" rel="noopener noreferrer">Grand Lodge of the Philippines</a></p>
-      <p class="foot-fine">Every date on the Heritage page is drawn from the directory entry above. Where the record is unresolved, this site says so rather than filling the gap.</p>
+      <p><a href="charter-1918.webp" target="_blank" rel="noopener noreferrer">The Lodge charter, 18 March 1918</a></p>
+      <p class="foot-fine">Dates on the Heritage page come from the charter and from the directory entry above. Where the record is unresolved, this site says so rather than filling the gap.</p>
     </div>
     <div class="foot-col">
       <h4>About your information</h4>
