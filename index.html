@@ -1191,6 +1191,29 @@
   .signed-bar strong{ color:var(--gold-hi) }
   .btn-sm{ padding:7px 14px; font-size:11.5px }
 
+
+  .rollcall-tools{
+    display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px;
+    margin:14px 0 4px; padding:12px 14px;
+    border:1px solid var(--line); border-radius:3px; background:rgba(217,180,100,.035);
+  }
+  .rc-field{ display:flex; flex-direction:column; gap:5px }
+  .rc-field > span{
+    font-family:var(--font-ui); font-size:10px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  .rc-field select, .rc-field input{
+    padding:8px 11px; border-radius:3px; background:var(--ink-800);
+    border:1px solid var(--line-mid); color:var(--text);
+    font-family:var(--font-body); font-size:15px;
+  }
+  .rc-grow{ flex:1; min-width:180px }
+  .rc-grow input{ width:100% }
+  .rc-count{
+    font-family:var(--font-ui); font-size:11.5px; letter-spacing:.08em;
+    color:var(--text-dim); margin-left:auto; padding-bottom:9px;
+  }
+
 </style>
 </head>
 <body>
@@ -1642,6 +1665,27 @@
         <div class="search-row">
           <input type="month" id="rollcall-month">
           <button class="btn" id="rollcall-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save Roll Call</span></button>
+        </div>
+        <!-- Catching up a backlog one member at a time is thousands of
+             clicks. Set the whole roll to a code, then change the few
+             that differ. -->
+        <div class="rollcall-tools">
+          <label class="rc-field">
+            <span>Set everyone to</span>
+            <select id="rollcall-bulk-code">
+              <option value="">— Absent —</option>
+              <option value="C">C</option>
+              <option value="NO">NO</option>
+              <option value="NC">NC</option>
+              <option value="NP">NP</option>
+            </select>
+          </label>
+          <button class="btn btn-sm" type="button" id="rollcall-bulk-apply">Apply to all</button>
+          <label class="rc-field rc-grow">
+            <span>Find a brother</span>
+            <input type="search" id="rollcall-filter" placeholder="Type part of a name" autocomplete="off">
+          </label>
+          <span class="rc-count" id="rollcall-count"></span>
         </div>
         <div id="rollcall-msg" class="hint"></div>
         <div class="table-wrap" style="margin-top:14px">
@@ -3796,6 +3840,47 @@ function renderRollCallTable() {
       tbody.appendChild(tr);
     });
 }
+(function wireRollCallTools() {
+  const bulk   = document.getElementById('rollcall-bulk-code');
+  const apply  = document.getElementById('rollcall-bulk-apply');
+  const filter = document.getElementById('rollcall-filter');
+  const count  = document.getElementById('rollcall-count');
+  if (!apply) return;
+
+  const rows = () => Array.from(document.querySelectorAll('#rollcall-table tbody tr'));
+
+  function updateCount() {
+    const all = rows();
+    const marked = all.filter(tr => tr.querySelector('select') && tr.querySelector('select').value).length;
+    const shown = all.filter(tr => tr.style.display !== 'none').length;
+    count.textContent = marked + ' of ' + all.length + ' marked' +
+      (shown !== all.length ? ' · ' + shown + ' shown' : '');
+  }
+
+  apply.addEventListener('click', () => {
+    // Only what is visible, so a filtered view does not quietly rewrite
+    // the whole roll.
+    const target = rows().filter(tr => tr.style.display !== 'none');
+    target.forEach(tr => { const sel = tr.querySelector('select'); if (sel) sel.value = bulk.value; });
+    updateCount();
+    toast(target.length + ' set to ' + (bulk.value || 'Absent') + '. Not saved yet.', 'ok');
+  });
+
+  filter.addEventListener('input', () => {
+    const q = filter.value.trim().toLowerCase();
+    rows().forEach(tr => {
+      const name = (tr.cells[0] ? tr.cells[0].textContent : '').toLowerCase();
+      tr.style.display = !q || name.indexOf(q) !== -1 ? '' : 'none';
+    });
+    updateCount();
+  });
+
+  document.querySelector('#rollcall-table').addEventListener('change', updateCount);
+  // The table is rebuilt whenever the sub-tab opens, so recount then too.
+  new MutationObserver(updateCount)
+    .observe(document.querySelector('#rollcall-table tbody'), { childList: true });
+})();
+
 document.getElementById('rollcall-save-btn').addEventListener('click', async () => {
   const msg = document.getElementById('rollcall-msg');
   const monthVal = document.getElementById('rollcall-month').value; // "YYYY-MM"
