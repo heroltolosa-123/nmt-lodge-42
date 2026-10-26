@@ -968,6 +968,13 @@
      courtesy — /api/password refuses the listing to every other chair. */
   .admins-only{ display:none }
   #admin-content.is-admin .admins-only{ display:inline-block }
+  .photo-req{ display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+    padding:14px 0; border-bottom:1px solid var(--line) }
+  .photo-req:last-child{ border-bottom:none }
+  .photo-req img{ width:86px; height:86px; object-fit:cover; border-radius:10px;
+    border:1px solid var(--line-mid); background:var(--ink-600) }
+  .photo-req .photo-req-who{ flex:1; min-width:170px }
+  .photo-arrow{ color:var(--text-soft); font-size:20px }
   #accounts-table td{ vertical-align:middle }
   #accounts-table input[type=email]{ width:100%; min-width:190px; font-size:13px; padding:8px 10px }
   /* On a phone the row is wider than the screen, which puts the Invite
@@ -1629,6 +1636,9 @@
         <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="reports">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15h6"/></svg>Reports</span>
         </button>
+        <button class="ribbon-btn admin-subtab editors-only" role="tab" aria-selected="false" data-sub="photos">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/></svg>Photos<span id="photo-badge" class="badge bad" style="margin-left:7px;display:none"></span></span>
+        </button>
         <button class="ribbon-btn admin-subtab admins-only" role="tab" aria-selected="false" data-sub="accounts">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Officer Accounts</span>
         </button>
@@ -1636,6 +1646,15 @@
 
       <!-- ROSTER -->
       <!-- REPORTS -->
+      <!-- MEMBER PHOTOGRAPHS -->
+      <div class="card admin-sub" id="sub-photos" style="display:none">
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/></svg>Member Photographs</h2>
+        <p class="hint">Pictures the brethren have sent from Find My Status. Nothing here is on
+           the website yet &mdash; it appears only when you approve it.</p>
+        <div id="photo-queue" style="margin-top:16px"></div>
+        <p class="hint" id="photo-queue-msg" role="status" aria-live="polite"></p>
+      </div>
+
       <!-- OFFICER ACCOUNTS -->
       <div class="card admin-sub" id="sub-accounts" style="display:none">
         <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Officer Accounts</h2>
@@ -2689,6 +2708,14 @@ function renderDetail(m) {
       </div>
       ${monthsHtml ? `<div class="term-list">${monthsHtml}</div>` : ''}
       ${m.attendanceRemarks ? `<p class="hint" style="margin-top:16px">Note: ${esc(m.attendanceRemarks)}</p>` : ''}
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--line)">
+      <div class="search-row">
+        <button class="btn btn-sm" type="button" id="photo-change"
+                data-name="${esc(m.fullName)}">Change my photo</button>
+        <input type="file" id="photo-file" accept="image/*" hidden>
+      </div>
+      <p class="hint" id="photo-msg" role="status" aria-live="polite" style="margin-top:10px">
+        Your picture is sent to the Lodge Secretary and appears here once he approves it.</p>
     </div>
   `;
 
@@ -2698,6 +2725,82 @@ function renderDetail(m) {
   kindle();
   countUpAll();
 }
+
+/* ---------------------------------------------------------------------
+   A BROTHER'S OWN PORTRAIT
+
+   Shrunk here rather than sent whole: a phone camera produces several
+   megabytes, and nothing on this card is ever displayed larger than a
+   few hundred pixels. It also means the Lodge never holds a photograph
+   bigger than it has any use for.
+
+   Nothing is published by this. It goes to the Secretary's queue.
+   --------------------------------------------------------------------- */
+const PHOTO_MAX_EDGE = 512;
+
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      // Always a JPEG, whatever came in — one format for the server to
+      // deal with, and the smallest of the three for a photograph.
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file is not a picture this browser can read.')); };
+    img.src = url;
+  });
+}
+
+const PHOTO_ERRORS = {
+  too_large:      'That picture is too large even after shrinking. Try another.',
+  not_an_image:   'That file is not a picture.',
+  no_such_member: 'The Lodge could not match that name. Search again and use the card it shows.',
+  no_photo_store: 'The Lodge cannot take pictures just now. Tell the Secretary.'
+};
+
+document.addEventListener('click', ev => {
+  if (ev.target.closest('#photo-change')) document.getElementById('photo-file').click();
+});
+
+document.addEventListener('change', async ev => {
+  if (ev.target.id !== 'photo-file') return;
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';                       // so the same file can be picked again
+  if (!file) return;
+
+  const btn = document.getElementById('photo-change');
+  const msg = document.getElementById('photo-msg');
+  const fullName = btn.dataset.name;
+  btn.disabled = true;
+  msg.innerHTML = '<span class="spinner"></span>Sending…';
+  try {
+    const image = await shrinkImage(file);
+    const res = await fetch('/api/photo', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ submit: true, fullName, image })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      msg.textContent = 'Thank you. Your picture is with the Lodge Secretary and '
+                      + 'will appear here once he has approved it.';
+      toast('Picture sent for approval.', 'ok');
+    } else {
+      msg.textContent = PHOTO_ERRORS[data.error] || 'That could not be sent. Tell the Secretary.';
+    }
+  } catch (err) {
+    msg.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 /* ---------------------------------------------------------------------
    REDRAW WHEN THE CACHE CATCHES UP
@@ -3619,6 +3722,9 @@ function enterDashboard() {
   document.getElementById('admin-lock').style.display = 'none';
   document.getElementById('admin-content').style.display = 'block';
   renderAdmin();
+  /* So a waiting photograph is noticed without the tab being opened —
+     a queue nobody looks at is the same as no queue. */
+  if (canEditRecords) loadPhotoQueue().catch(() => { /* badge stays hidden */ });
 }
 
 async function unlockAdmin() {
@@ -4428,6 +4534,112 @@ function currentTermRange() {
 })();
 
 /* ---------------------------------------------------------------------
+   MEMBER PHOTOGRAPHS — the Secretary's queue
+
+   A picture is shown beside the one already on the record, because the
+   decision is almost always "is this the same man" and that is a great
+   deal easier to answer with both in front of you.
+   --------------------------------------------------------------------- */
+async function photoQueue(body) {
+  const res = await fetch('/api/photo', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin', body: JSON.stringify(body)
+  });
+  return { ok: res.ok, status: res.status, data: await res.json().catch(() => ({})) };
+}
+
+function setPhotoBadge(n) {
+  const badge = document.getElementById('photo-badge');
+  badge.textContent = n;
+  badge.style.display = n ? 'inline-block' : 'none';
+}
+
+async function loadPhotoQueue() {
+  const box = document.getElementById('photo-queue');
+  const msg = document.getElementById('photo-queue-msg');
+  msg.textContent = '';
+  box.innerHTML = '<p class="hint">Loading…</p>';
+
+  let out;
+  try { out = await photoQueue({ pending: true }); }
+  catch (err) { box.innerHTML = ''; msg.textContent = err.message; return; }
+  if (!out.ok) {
+    box.innerHTML = '';
+    msg.textContent = out.data.detail || PHOTO_ERRORS[out.data.error] ||
+                      out.data.error || ('Server returned ' + out.status);
+    return;
+  }
+
+  const list = out.data.pending || [];
+  setPhotoBadge(list.length);
+  if (!list.length) {
+    box.innerHTML = '<p class="hint">No pictures waiting.</p>';
+    return;
+  }
+
+  box.innerHTML = list.map(req => {
+    // The roster is already loaded, so the member id never has to travel
+    // through the public lookup to get here.
+    const member = fullRoster.find(x => normaliseName(x.fullName) === normaliseName(req.fullName));
+    const current = member && member.photoUrl
+      ? `<img src="${esc(member.photoUrl)}" alt="" loading="lazy"><span class="photo-arrow">&rarr;</span>`
+      : '<span class="hint">no picture yet</span><span class="photo-arrow">&rarr;</span>';
+    return `<div class="photo-req" data-name="${esc(req.fullName)}"
+                 data-member="${esc(member ? member.memberId : '')}">
+      ${current}
+      <img src="/api/photo?k=${esc(req.photo)}" alt="Submitted picture of ${esc(req.fullName)}" loading="lazy">
+      <div class="photo-req-who">
+        <strong>${esc(req.fullName)}</strong>
+        <div class="hint">${member ? '' : 'Not matched on the roster — approving is not possible.'}</div>
+      </div>
+      <div style="white-space:nowrap">
+        ${member ? '<button class="btn btn-sm" type="button" data-act="approve">Approve</button> ' : ''}
+        <button class="btn btn-sm" type="button" data-act="reject">Reject</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const normaliseName = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+document.getElementById('photo-queue').addEventListener('click', async ev => {
+  const btn = ev.target.closest('button[data-act]');
+  if (!btn) return;
+  const row = btn.closest('.photo-req');
+  const name = row.dataset.name;
+  const msg = document.getElementById('photo-queue-msg');
+
+  if (btn.dataset.act === 'reject' &&
+      !confirm('Reject the picture sent for ' + name + '? It will be deleted.')) return;
+
+  [...row.querySelectorAll('button')].forEach(b => { b.disabled = true; });
+  msg.innerHTML = '<span class="spinner"></span>Working…';
+  try {
+    const out = btn.dataset.act === 'approve'
+      ? await photoQueue({ approve: name, memberId: row.dataset.member })
+      : await photoQueue({ reject: name });
+    if (out.ok) {
+      msg.textContent = btn.dataset.act === 'approve'
+        ? name + ' now shows that picture on the website.'
+        : 'The picture for ' + name + ' was deleted.';
+      toast(btn.dataset.act === 'approve' ? 'Approved.' : 'Rejected.', 'ok');
+      if (btn.dataset.act === 'approve') {
+        const member = fullRoster.find(x => x.memberId === row.dataset.member);
+        if (member) member.photoUrl = out.data.photoUrl;   // so a re-draw shows it
+      }
+      loadPhotoQueue();
+    } else {
+      msg.textContent = out.data.detail || PHOTO_ERRORS[out.data.error] ||
+                        out.data.error || ('Server returned ' + out.status);
+      [...row.querySelectorAll('button')].forEach(b => { b.disabled = false; });
+    }
+  } catch (err) {
+    msg.textContent = err.message;
+    [...row.querySelectorAll('button')].forEach(b => { b.disabled = false; });
+  }
+});
+
+/* ---------------------------------------------------------------------
    OFFICER ACCOUNTS
 
    The administrator's view of the whole line: who can already sign in,
@@ -4607,6 +4819,7 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
     if (btn.dataset.sub === 'officers') loadOfficersAdmin();
     if (btn.dataset.sub === 'bulletin') loadBulletinAdmin();
     if (btn.dataset.sub === 'accounts') loadAccounts();
+    if (btn.dataset.sub === 'photos') loadPhotoQueue();
   });
 });
 
