@@ -8,13 +8,20 @@ import { publicView, requireEnv, normalise, json } from './_lib.mjs';
    That is the whole point: a request with no term, or a two-letter term,
    gets nothing, so there is no query that returns the book.
 
-   The roster is fetched once per warm instance and held for five minutes.
+   The roster is fetched once per warm instance and held for a minute.
    A cold start pays the Apps Script round trip; everything after it is
    served from memory, and identical searches are served from Vercel's
    edge without reaching this function at all.
+
+   It was five minutes, with an hour of stale-while-revalidate behind it,
+   which was reasonable while a member record only changed when the
+   Secretary changed it. Now a brother can send his own portrait and
+   watch this card for it, and being told to come back in an hour reads
+   as the thing being broken. A minute costs at most one roster fetch a
+   minute per warm instance, which is nothing.
    --------------------------------------------------------------------- */
 
-const ROSTER_TTL = 5 * 60 * 1000;
+const ROSTER_TTL = 60 * 1000;
 let cache = { at: 0, rows: null };
 let inflight = null;
 
@@ -63,7 +70,7 @@ export default async function handler(req, res) {
     .slice(0, 15)
     .map(publicView);
 
-  // Identical searches are answered by the edge for five minutes, and a
-  // stale answer may be served for an hour while a fresh one is fetched.
-  json(res, 200, { matches }, 'public, s-maxage=300, stale-while-revalidate=3600');
+  // Identical searches are answered by the edge for a minute, and a stale
+  // answer for a minute more while a fresh one is fetched behind it.
+  json(res, 200, { matches }, 'public, s-maxage=60, stale-while-revalidate=60');
 }
