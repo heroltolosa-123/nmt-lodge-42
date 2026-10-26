@@ -1,4 +1,4 @@
-import { ROLES, requireEnv, readSession, json } from './_lib.mjs';
+import { ROLES, canEdit, requireEnv, readSession, json } from './_lib.mjs';
 
 export default async function handler(req, res) {
   let secret;
@@ -7,5 +7,6 @@ export default async function handler(req, res) {
 
   const s = readSession(req, secret);
   if (!s) return json(res, 200, { signedIn: false });
-  json(res, 200, { signedIn: true, role: s.role, label: ROLES[s.role].label, expiresAt: s.exp });
+  json(res, 200, { signedIn: true, role: s.role, label: ROLES[s.role].label,
+                   canEdit: canEdit(s.role), expiresAt: s.exp });
 }

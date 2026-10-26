@@ -56,6 +56,23 @@ export default async function handler(req, res) {
     });
   }
 
+  // --- the administrator giving a chair its opening password ----------
+  if (body.setFor) {
+    if (session.role !== 'admin') return json(res, 403, { error: 'not_permitted' });
+    const target = String(body.setFor).toLowerCase();
+    if (!ROLES[target]) return json(res, 400, { error: 'unknown_chair' });
+    const given = String(body.newPassword || '');
+    if (given.length < MIN_LENGTH) return json(res, 400, { error: 'too_short', minLength: MIN_LENGTH });
+    if (given.trim() !== given) return json(res, 400, { error: 'edge_whitespace' });
+    await kvSet(kvPasswordKey(target), hashPassword(given));
+    console.log(JSON.stringify({ at: new Date().toISOString(), actor: session.role,
+                                 action: 'setPasswordFor', target }));
+    return json(res, 200, {
+      setFor: target, label: ROLES[target].label,
+      detail: 'Give this password to the officer. They can change it themselves once signed in.'
+    });
+  }
+
   // --- an officer changing their own ---------------------------------
   const current = String(body.currentPassword || '');
   const next    = String(body.newPassword || '');

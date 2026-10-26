@@ -53,20 +53,58 @@ export function json(res, status, body, cacheControl) {
 import crypto from 'node:crypto';
 import { kvGet } from './_kv.mjs';
 
+/* Every chair of the 2026-2027 line. Keyed to the chair, never to the brother
+   holding it, so a handover in March is a new password rather than a new
+   account.
+
+   `edit` is the whole access model. The Master, the Wardens, the Secretary and
+   the Treasurer run the Lodge's records and may change them. Every other
+   officer signs in and sees the same roster, attendance and arrears, and can
+   change nothing — asked for in those words: full control for the three lights
+   and the Secretary, the rest to view only.
+
+   A chair with no password set simply cannot be signed into. The seventeen
+   added here have none until the administrator gives them one, so listing a
+   chair does not open it. */
 export const ROLES = {
-  wm:        { label: 'Worshipful Master', env: 'PW_WM' },
-  sw:        { label: 'Senior Warden',     env: 'PW_SW' },
-  jw:        { label: 'Junior Warden',     env: 'PW_JW' },
-  secretary: { label: 'Secretary',         env: 'PW_SECRETARY' },
-  treasurer: { label: 'Treasurer',         env: 'PW_TREASURER' },
+  // the chairs that may change records
+  wm:         { label: 'Worshipful Master', env: 'PW_WM',        edit: true },
+  sw:         { label: 'Senior Warden',     env: 'PW_SW',        edit: true },
+  jw:         { label: 'Junior Warden',     env: 'PW_JW',        edit: true },
+  secretary:  { label: 'Secretary',         env: 'PW_SECRETARY', edit: true },
+  treasurer:  { label: 'Treasurer',         env: 'PW_TREASURER', edit: true },
+
+  // the rest of the line: the same view, nothing to change
+  auditor:    { label: 'Auditor',             env: 'PW_AUDITOR' },
+  harmony:    { label: 'Harmony Officer',     env: 'PW_HARMONY' },
+  chaplain:   { label: 'Chaplain',            env: 'PW_CHAPLAIN' },
+  marshal:    { label: 'Marshal',             env: 'PW_MARSHAL' },
+  sd:         { label: 'Senior Deacon',       env: 'PW_SD' },
+  jd:         { label: 'Junior Deacon',       env: 'PW_JD' },
+  ss:         { label: 'Senior Steward',      env: 'PW_SS' },
+  js:         { label: 'Junior Steward',      env: 'PW_JS' },
+  organist:   { label: 'Organist',            env: 'PW_ORGANIST' },
+  biblebearer:{ label: 'Bible Bearer',        env: 'PW_BIBLEBEARER' },
+  almoner:    { label: 'Almoner',             env: 'PW_ALMONER' },
+  orator:     { label: 'Orator',              env: 'PW_ORATOR' },
+  lecturer:   { label: 'Lecturer',            env: 'PW_LECTURER' },
+  historian:  { label: 'Historian',           env: 'PW_HISTORIAN' },
+  custodian:  { label: 'Custodian of Works',  env: 'PW_CUSTODIAN' },
+  property:   { label: 'Property Custodian',  env: 'PW_PROPERTY' },
+  tyler:      { label: 'Tyler',               env: 'PW_TYLER' },
 
   /* Not offered on the sign-in form, for the brother who keeps the system
-     rather than a chair. `hidden` only keeps it out of the form and out of
-     the public health report — it is not what makes it safe. The password
-     is. /api/login answers unknown chair, unset password and wrong password
-     with the same 401, so the name cannot be found by probing either. */
-  admin:     { label: 'Lodge Administrator', env: 'PW_ADMIN', hidden: true }
+     rather than holding a chair. `hidden` only keeps it out of the form and
+     out of the public health report — it is not what makes it safe. The
+     password is. /api/login answers unknown chair, unset password and wrong
+     password with the same 401, so the name cannot be found by probing. */
+  admin:      { label: 'Lodge Administrator', env: 'PW_ADMIN', edit: true, hidden: true }
 };
+
+/* May this chair change the Lodge's records? */
+export function canEdit(role) {
+  return !!(ROLES[role] && ROLES[role].edit);
+}
 
 /* The chairs the sign-in form offers. */
 export const VISIBLE_ROLES = Object.fromEntries(

@@ -1181,6 +1181,15 @@
   .lock-field select:focus, .lock-field input:focus{
     outline:none; border-color:var(--line-hi); box-shadow:0 0 0 3px rgba(217,180,100,.08);
   }
+  /* A chair that may not change records never sees the controls that would.
+     Cosmetic only — /api/action refuses the request regardless, because a
+     hidden button stops nobody who can send one by hand. */
+  .view-only .editors-only{ display:none !important }
+  .view-only-note{
+    margin:0 0 14px; padding:11px 15px; border-radius:var(--radius-sm);
+    border:1px solid var(--line-mid); background:var(--ink-800);
+    color:var(--text-soft); font-size:14.5px;
+  }
   .signed-bar-actions{ display:flex; gap:8px; flex-wrap:wrap }
   .signed-bar{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -1522,6 +1531,23 @@
             <option value="sw">Senior Warden</option>
             <option value="jw">Junior Warden</option>
             <option value="treasurer">Treasurer</option>
+            <option value="auditor">Auditor</option>
+            <option value="harmony">Harmony Officer</option>
+            <option value="chaplain">Chaplain</option>
+            <option value="marshal">Marshal</option>
+            <option value="sd">Senior Deacon</option>
+            <option value="jd">Junior Deacon</option>
+            <option value="ss">Senior Steward</option>
+            <option value="js">Junior Steward</option>
+            <option value="organist">Organist</option>
+            <option value="biblebearer">Bible Bearer</option>
+            <option value="almoner">Almoner</option>
+            <option value="orator">Orator</option>
+            <option value="lecturer">Lecturer</option>
+            <option value="historian">Historian</option>
+            <option value="custodian">Custodian of Works</option>
+            <option value="property">Property Custodian</option>
+            <option value="tyler">Tyler</option>
           </select>
         </label>
         <label class="lock-field">
@@ -1540,13 +1566,13 @@
         <button class="ribbon-btn admin-subtab" role="tab" aria-selected="true" data-sub="roster">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Roster</span>
         </button>
-        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="rollcall">
+        <button class="ribbon-btn admin-subtab editors-only" role="tab" aria-selected="false" data-sub="rollcall">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>Roll Call</span>
         </button>
-        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="dues">
+        <button class="ribbon-btn admin-subtab editors-only" role="tab" aria-selected="false" data-sub="dues">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/></svg>Log Dues</span>
         </button>
-        <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="addmember">
+        <button class="ribbon-btn admin-subtab editors-only" role="tab" aria-selected="false" data-sub="addmember">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Add Member</span>
         </button>
         <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="activities">
@@ -1787,7 +1813,7 @@
         <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><circle cx="12" cy="8" r="7"/></svg>Posted Activities</h2>
         <p class="hint" style="margin-top:-6px">Everything here shows up publicly under "Accomplishments &amp; Activities."</p>
         <div class="search-row">
-          <button class="btn" id="activity-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post New Activity</span></button>
+          <button class="btn editors-only" id="activity-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post New Activity</span></button>
         </div>
         <div id="activities-admin-list"></div>
       </div>
@@ -1821,7 +1847,7 @@
         <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Officer Roster</h2>
         <p class="hint" style="margin-top:-6px">Mark someone "Past" when a new term begins — their record stays in history under that term.</p>
         <div class="search-row">
-          <button class="btn" id="officer-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Officer</span></button>
+          <button class="btn editors-only" id="officer-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Officer</span></button>
         </div>
         <div id="officers-admin-list"></div>
       </div>
@@ -1853,7 +1879,7 @@
         <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>Bulletin Board</h2>
         <p class="hint" style="margin-top:-6px">Everything here shows up publicly under "Bulletin Board." Pinned items always appear first.</p>
         <div class="search-row">
-          <button class="btn" id="announcement-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post Announcement</span></button>
+          <button class="btn editors-only" id="announcement-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post Announcement</span></button>
         </div>
         <div id="bulletin-admin-list"></div>
       </div>
@@ -3151,7 +3177,7 @@ async function loadActivitiesAdmin() {
           <div class="hint" style="margin:0">${formatActivityDate(a.date)} · ${a.category}</div>
         </div>
         <div class="aactions">
-          <button class="btn btn-sm" data-edit-activity="${a.activityId}">Edit</button>
+          <button class="btn btn-sm editors-only" data-edit-activity="${a.activityId}">Edit</button>
           <button class="btn btn-sm btn-danger" data-delete-activity="${a.activityId}">Delete</button>
         </div>
       </div>
@@ -3258,7 +3284,7 @@ async function loadOfficersAdmin() {
           <div class="hint" style="margin:0">${o.position} · ${o.term || 'No term set'} · <span class="badge ${o.status === 'Current' ? 'ok' : 'neutral'}">${o.status}</span></div>
         </div>
         <div class="aactions">
-          <button class="btn btn-sm" data-edit-officer="${o.officerId}">Edit</button>
+          <button class="btn btn-sm editors-only" data-edit-officer="${o.officerId}">Edit</button>
           <button class="btn btn-sm btn-danger" data-delete-officer="${o.officerId}">Delete</button>
         </div>
       </div>
@@ -3356,7 +3382,7 @@ async function loadBulletinAdmin() {
           <div class="hint" style="margin:0">${formatBulletinDate(a.datePosted)}${a.expiryDate ? ' · expires ' + formatBulletinDate(a.expiryDate) : ''}</div>
         </div>
         <div class="aactions">
-          <button class="btn btn-sm" data-edit-ann="${a.announcementId}">Edit</button>
+          <button class="btn btn-sm editors-only" data-edit-ann="${a.announcementId}">Edit</button>
           <button class="btn btn-sm btn-danger" data-delete-ann="${a.announcementId}">Delete</button>
         </div>
       </div>
@@ -3439,6 +3465,45 @@ let apiAuthAvailable = null;
 let currentRole = null;
 let usingApiSession = false;   // true once /api/login has issued a cookie
 
+/* ---------------------------------------------------------------------
+   WHAT THIS CHAIR MAY DO
+
+   The Master, the Wardens, the Secretary and the Treasurer run the
+   Lodge's records. Every other officer sees exactly the same roster,
+   attendance and arrears and changes nothing.
+
+   Hiding the controls is a courtesy, not the control: /api/action refuses
+   a write from a view-only chair whatever the page shows, because a
+   hidden button stops nobody who can send a request by hand.
+   --------------------------------------------------------------------- */
+let canEditRecords = true;
+
+function applyChairPermissions(who) {
+  // Absent on the older path, where every chair could edit. Only a
+  // deliberate false takes the controls away.
+  canEditRecords = who.canEdit !== false;
+  const content = document.getElementById('admin-content');
+  content.classList.toggle('view-only', !canEditRecords);
+
+  const existing = document.getElementById('view-only-note');
+  if (existing) existing.remove();
+  if (canEditRecords) return;
+
+  const note = document.createElement('p');
+  note.id = 'view-only-note';
+  note.className = 'view-only-note';
+  note.textContent = (who.label || 'This chair') + ' can see the whole roster, '
+    + 'attendance and arrears. Changes are made by the Worshipful Master, the '
+    + 'Wardens, the Secretary or the Treasurer.';
+  content.insertBefore(note, content.firstChild);
+
+  // If a hidden tab was the one showing, move to one this chair can use.
+  const open = document.querySelector('.admin-subtab[aria-selected="true"]');
+  if (open && open.classList.contains('editors-only')) {
+    document.querySelector('.admin-subtab:not(.editors-only)').click();
+  }
+}
+
 function enterDashboard() {
   document.getElementById('admin-lock').style.display = 'none';
   document.getElementById('admin-content').style.display = 'block';
@@ -3490,6 +3555,7 @@ async function unlockAdmin() {
         }
         fullRoster = roster.roster || [];
         msg.textContent = '';
+        applyChairPermissions(who);
         showSignedIn(who.label);
         enterDashboard();
         return;
@@ -3560,10 +3626,57 @@ function togglePasswordForm() {
     <div class="search-row" style="margin-top:14px">
       <button class="btn" type="button" id="pw-save">Save new password</button>
     </div>
-    <p class="hint" id="pw-msg" role="status" aria-live="polite"></p>`;
+    <p class="hint" id="pw-msg" role="status" aria-live="polite"></p>
+    <div id="pw-admin"></div>`;
   const bar = document.getElementById('signed-in-bar');
   bar.parentNode.insertBefore(card, bar.nextSibling);
   document.getElementById('pw-current').focus();
+
+  /* The administrator hands a chair its opening password. Without this,
+     seventeen new chairs would mean seventeen new Vercel settings; the
+     officer changes it themselves once they are in. */
+  if (currentRole === 'admin') {
+    document.getElementById('pw-admin').innerHTML = `
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--line-mid)">
+      <h3 style="margin:0 0 6px">Give a chair its opening password</h3>
+      <p class="hint">Hand it to the officer in person. They can change it once signed in.</p>
+      <div class="grid-2" style="margin-top:12px">
+        <div><label class="hint">Chair</label><select id="pw-chair"></select></div>
+        <div><label class="hint">Opening password (at least 10 characters)</label>
+          <input type="text" id="pw-for-chair" autocomplete="off"></div>
+      </div>
+      <div class="search-row" style="margin-top:14px">
+        <button class="btn" type="button" id="pw-set-chair">Set this chair's password</button>
+      </div>
+      <p class="hint" id="pw-chair-msg" role="status" aria-live="polite"></p>`;
+
+    const sel = document.getElementById('pw-chair');
+    sel.innerHTML = [...document.querySelectorAll('#admin-role option')]
+      .map(o => `<option value="${o.value}">${esc(o.textContent)}</option>`).join('');
+
+    document.getElementById('pw-set-chair').addEventListener('click', async () => {
+      const m = document.getElementById('pw-chair-msg');
+      const chair = sel.value;
+      const given = document.getElementById('pw-for-chair').value;
+      if (given.length < 10) { m.textContent = 'Use at least 10 characters.'; return; }
+      m.innerHTML = '<span class="spinner"></span>Saving…';
+      try {
+        const res = await fetch('/api/password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ setFor: chair, newPassword: given })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          m.textContent = data.label + ' can now sign in with that password.';
+          document.getElementById('pw-for-chair').value = '';
+          toast(data.label + ' password set.', 'ok');
+        } else {
+          m.textContent = data.detail || data.error || ('Server returned ' + res.status);
+        }
+      } catch (err) { m.textContent = err.message; }
+    });
+  }
 
   document.getElementById('pw-save').addEventListener('click', async () => {
     const msg = document.getElementById('pw-msg');
@@ -3706,7 +3819,7 @@ function renderTable() {
         <td>${ynIcon(m.qualifiedToVote)}</td>
         <td>${m.arrears ? '₱' + Number(m.arrears).toLocaleString() : '—'}</td>
         <td>${m.remarks || m.attendanceRemarks || ''}</td>
-        <td><button class="btn" style="padding:6px 12px;font-size:13px" data-edit="${m.memberId}"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</span></button></td>
+        <td><button class="btn editors-only" style="padding:6px 12px;font-size:13px" data-edit="${m.memberId}"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</span></button></td>
       `;
       tbody.appendChild(tr);
     });

@@ -45,5 +45,5 @@ export default async function handler(req, res) {
 
   const session = newSession(role);
   res.setHeader('Set-Cookie', sessionCookie(signToken(session, secret)));
-  json(res, 200, { role, label: spec.label, expiresAt: session.exp });
+  json(res, 200, { role, label: spec.label, canEdit: !!spec.edit, expiresAt: session.exp });
 }

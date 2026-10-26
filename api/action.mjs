@@ -1,4 +1,4 @@
-import { ROLES, requireEnv, readSession, readBody, json } from './_lib.mjs';
+import { ROLES, canEdit, requireEnv, readSession, readBody, json } from './_lib.mjs';
 
 /* ---------------------------------------------------------------------
    Authenticated proxy to Apps Script.
@@ -48,8 +48,21 @@ export default async function handler(req, res) {
     return json(res, 400, { error: 'unknown_action', action });
   }
 
-  // Every chair carries the same authority, as the Lodge asked. The role
-  // is recorded so the log can say who, which a shared password never could.
+  /* Reading is open to every chair; changing records is not. Enforced here
+     rather than only in the page, because hiding a button in the browser
+     stops nobody who can send a request by hand. */
+  if (!isRead && !canEdit(session.role)) {
+    console.log(JSON.stringify({ at: new Date().toISOString(), actor: session.role,
+                                 action, refused: 'read_only_chair' }));
+    return json(res, 403, {
+      error: 'read_only_chair',
+      detail: ROLES[session.role].label + ' can view the records but not change them. '
+            + 'Ask the Secretary or one of the three lights.'
+    });
+  }
+
+  // The role is recorded so the log can say who, which a shared password
+  // never could.
   console.log(JSON.stringify({
     at: new Date().toISOString(),
     actor: session.role,
