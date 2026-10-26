@@ -964,6 +964,12 @@
   .stat-card .lbl{ font-family:var(--font-ui); font-size:11px; text-transform:uppercase; letter-spacing:.11em; color:var(--text-dim); margin-top:6px }
 
   .admin-sub{ margin-top:18px }
+  /* The accounts tab belongs to the administrator alone. Hiding it is a
+     courtesy — /api/password refuses the listing to every other chair. */
+  .admins-only{ display:none }
+  #admin-content.is-admin .admins-only{ display:inline-block }
+  #accounts-table td{ vertical-align:middle }
+  #accounts-table input[type=email]{ width:100%; min-width:190px; font-size:13px; padding:8px 10px }
   table{ width:100%; border-collapse:collapse; margin-top:10px; font-size:14px }
   th, td{ text-align:left; padding:11px 13px; border-bottom:1px solid var(--line) }
   th{
@@ -1587,10 +1593,48 @@
         <button class="ribbon-btn admin-subtab" role="tab" aria-selected="false" data-sub="reports">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15h6"/></svg>Reports</span>
         </button>
+        <button class="ribbon-btn admin-subtab admins-only" role="tab" aria-selected="false" data-sub="accounts">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Officer Accounts</span>
+        </button>
       </div>
 
       <!-- ROSTER -->
       <!-- REPORTS -->
+      <!-- OFFICER ACCOUNTS -->
+      <div class="card admin-sub" id="sub-accounts" style="display:none">
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Officer Accounts</h2>
+        <p class="hint">Every chair of the line. Send a brother a link and he chooses his own password &mdash;
+           it is never shown to you, or to anyone else. A link works once and expires after seven days.</p>
+
+        <div class="table-wrap">
+          <table id="accounts-table">
+            <thead>
+              <tr><th>Chair</th><th>Access</th><th>Account</th><th>Send a link to</th><th></th></tr>
+            </thead>
+            <tbody id="accounts-body">
+              <tr><td colspan="5" class="hint">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="hint" id="accounts-msg" role="status" aria-live="polite" style="margin-top:12px"></p>
+        <div id="accounts-link-box"></div>
+
+        <details style="margin-top:20px">
+          <summary class="hint" style="cursor:pointer">Set a password for an officer yourself</summary>
+          <p class="hint" style="margin-top:8px">Only when a brother cannot use a link at all.
+             You will know his password until he changes it, which is the whole reason to prefer a link.</p>
+          <div class="grid-2" style="margin-top:10px">
+            <div><label class="hint">Chair</label><select id="acct-chair2"></select></div>
+            <div><label class="hint">Opening password (at least 10 characters)</label>
+              <input type="text" id="acct-password" autocomplete="off"></div>
+          </div>
+          <div class="search-row" style="margin-top:12px">
+            <button class="btn btn-sm" type="button" id="acct-set">Set it</button>
+          </div>
+        </details>
+      </div>
+
       <div class="card admin-sub" id="sub-reports" style="display:none">
         <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15h6"/></svg>Reports</h2>
         <p class="hint">Takes a copy of the roster as currently loaded. The Excel workbook holds every report on its own sheet; the CSV files hold one report each.</p>
@@ -3514,6 +3558,7 @@ function applyChairPermissions(who) {
   canEditRecords = who.canEdit !== false;
   const content = document.getElementById('admin-content');
   content.classList.toggle('view-only', !canEditRecords);
+  content.classList.toggle('is-admin', who.role === 'admin');
 
   const existing = document.getElementById('view-only-note');
   if (existing) existing.remove();
@@ -3656,110 +3701,14 @@ function togglePasswordForm() {
     <div class="search-row" style="margin-top:14px">
       <button class="btn" type="button" id="pw-save">Save new password</button>
     </div>
-    <p class="hint" id="pw-msg" role="status" aria-live="polite"></p>
-    <div id="pw-admin"></div>`;
+    <p class="hint" id="pw-msg" role="status" aria-live="polite"></p>`;
   const bar = document.getElementById('signed-in-bar');
   bar.parentNode.insertBefore(card, bar.nextSibling);
   document.getElementById('pw-current').focus();
 
-  /* The administrator hands a chair its opening password. Without this,
-     seventeen new chairs would mean seventeen new Vercel settings; the
-     officer changes it themselves once they are in. */
-  if (currentRole === 'admin') {
-    document.getElementById('pw-admin').innerHTML = `
-      <hr style="margin:20px 0;border:none;border-top:1px solid var(--line-mid)">
-      <h3 style="margin:0 0 6px">Invite an officer</h3>
-      <p class="hint">Sends a one-time link. The officer chooses their own password &mdash;
-         you never see it. The link works once and expires after seven days.</p>
-      <div class="grid-2" style="margin-top:12px">
-        <div><label class="hint">Chair</label><select id="pw-chair"></select></div>
-        <div><label class="hint">Email (optional &mdash; leave blank to copy the link yourself)</label>
-          <input type="email" id="pw-email" autocomplete="off" placeholder="brother@example.com"></div>
-      </div>
-      <div class="search-row" style="margin-top:14px">
-        <button class="btn" type="button" id="pw-invite">Create the link</button>
-      </div>
-      <p class="hint" id="pw-chair-msg" role="status" aria-live="polite"></p>
-      <div id="pw-link-box"></div>
-
-      <details style="margin-top:18px">
-        <summary class="hint" style="cursor:pointer">Or set a password for them yourself</summary>
-        <p class="hint" style="margin-top:8px">Only if the officer cannot use a link.
-           You will know their password until they change it.</p>
-        <div class="grid-2" style="margin-top:10px">
-          <div><label class="hint">Chair</label><select id="pw-chair2"></select></div>
-          <div><label class="hint">Opening password (at least 10 characters)</label>
-            <input type="text" id="pw-for-chair" autocomplete="off"></div>
-        </div>
-        <div class="search-row" style="margin-top:12px">
-          <button class="btn btn-sm" type="button" id="pw-set-chair">Set it</button>
-        </div>
-      </details>`;
-
-    const chairOptions = [...document.querySelectorAll('#admin-role option')]
-      .map(o => `<option value="${o.value}">${esc(o.textContent)}</option>`).join('');
-    const sel = document.getElementById('pw-chair');
-    sel.innerHTML = chairOptions;
-    document.getElementById('pw-chair2').innerHTML = chairOptions;
-
-    document.getElementById('pw-invite').addEventListener('click', async () => {
-      const m = document.getElementById('pw-chair-msg');
-      const box = document.getElementById('pw-link-box');
-      box.innerHTML = '';
-      m.innerHTML = '<span class="spinner"></span>Creating…';
-      try {
-        const res = await fetch('/api/invite', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ chair: sel.value, email: document.getElementById('pw-email').value.trim() })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          m.textContent = data.error === 'no_password_store'
-            ? 'The password store is not set up yet.'
-            : (data.error || ('Server returned ' + res.status));
-          return;
-        }
-        m.textContent = data.emailed && data.emailed.sent
-          ? 'Emailed to ' + data.emailed.to + '. It expires in seven days.'
-          : 'Link ready for ' + data.label + '. Send it however you like — it expires in seven days.';
-        box.innerHTML = `<input type="text" readonly value="${esc(data.link)}"
-             style="width:100%;margin-top:10px;font-size:13px" onclick="this.select()">
-          <button class="btn btn-sm" type="button" id="pw-copy" style="margin-top:8px">Copy link</button>`;
-        document.getElementById('pw-copy').addEventListener('click', () => {
-          navigator.clipboard.writeText(data.link).then(
-            () => toast('Link copied.', 'ok'),
-            () => toast('Select the link and copy it.', 'bad'));
-        });
-        if (data.emailed && !data.emailed.sent && document.getElementById('pw-email').value.trim()) {
-          m.textContent += ' (Email not sent: ' + data.emailed.reason + ')';
-        }
-      } catch (err) { m.textContent = err.message; }
-    });
-
-    document.getElementById('pw-set-chair').addEventListener('click', async () => {
-      const m = document.getElementById('pw-chair-msg');
-      const chair = document.getElementById('pw-chair2').value;
-      const given = document.getElementById('pw-for-chair').value;
-      if (given.length < 10) { m.textContent = 'Use at least 10 characters.'; return; }
-      m.innerHTML = '<span class="spinner"></span>Saving…';
-      try {
-        const res = await fetch('/api/password', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ setFor: chair, newPassword: given })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          m.textContent = data.label + ' can now sign in with that password.';
-          document.getElementById('pw-for-chair').value = '';
-          toast(data.label + ' password set.', 'ok');
-        } else {
-          m.textContent = data.detail || data.error || ('Server returned ' + res.status);
-        }
-      } catch (err) { m.textContent = err.message; }
-    });
-  }
+  /* Everything to do with OTHER chairs lives in the Officer Accounts tab
+     now. This card changes your own password and nothing else — which is
+     what its heading says, and where the administrator went looking. */
 
   document.getElementById('pw-save').addEventListener('click', async () => {
     const msg = document.getElementById('pw-msg');
@@ -3802,7 +3751,9 @@ async function signOut() {
   sessionStorage.removeItem('nmt_admin_key');
   currentRole = null;
   fullRoster = [];
-  document.getElementById('admin-content').style.display = 'none';
+  const content = document.getElementById('admin-content');
+  content.classList.remove('is-admin', 'view-only');
+  content.style.display = 'none';
   document.getElementById('admin-lock').style.display = 'block';
   document.getElementById('admin-pass').value = '';
   toast('Signed out.', 'ok');
@@ -4406,6 +4357,155 @@ function currentTermRange() {
 })();
 
 /* ---------------------------------------------------------------------
+   OFFICER ACCOUNTS
+
+   The administrator's view of the whole line: who can already sign in,
+   who is still waiting on a link, and who has nothing. A password is
+   never shown here because none is ever held — only replaced.
+   --------------------------------------------------------------------- */
+const ACCOUNT_STATE = {
+  chosen:  { badge: 'ok',      text: 'Password set' },
+  opening: { badge: 'warn',    text: 'Opening password' },
+  none:    { badge: 'neutral', text: 'No account yet' }
+};
+
+async function loadAccounts() {
+  const body = document.getElementById('accounts-body');
+  body.innerHTML = '<tr><td colspan="5" class="hint">Loading…</td></tr>';
+  let data;
+  try {
+    const res = await fetch('/api/password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify({ list: true })
+    });
+    data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      body.innerHTML = '<tr><td colspan="5" class="hint">' +
+        esc(data.detail || data.error || ('Server returned ' + res.status)) + '</td></tr>';
+      return;
+    }
+  } catch (err) {
+    body.innerHTML = '<tr><td colspan="5" class="hint">' + esc(err.message) + '</td></tr>';
+    return;
+  }
+
+  body.innerHTML = data.chairs.map(c => {
+    const state = ACCOUNT_STATE[c.state] || ACCOUNT_STATE.none;
+    const account = c.invitePending
+      ? '<span class="badge warn">Link sent, not used yet</span>'
+      : '<span class="badge ' + state.badge + '">' + state.text + '</span>';
+    return '<tr data-chair="' + esc(c.chair) + '">' +
+      '<td><strong>' + esc(c.label) + '</strong></td>' +
+      '<td class="hint">' + (c.canEdit ? 'Can change records' : 'View only') + '</td>' +
+      '<td>' + account + '</td>' +
+      '<td><input type="email" autocomplete="off" placeholder="brother@example.com" ' +
+          'aria-label="Email for ' + esc(c.label) + '"></td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn btn-sm" type="button" data-act="invite">' +
+          (c.state === 'none' ? 'Invite' : 'New link') + '</button>' +
+        (c.state === 'chosen'
+          ? ' <button class="btn btn-sm" type="button" data-act="reset" ' +
+            'title="Puts this chair back to the password in Vercel">Clear</button>'
+          : '') +
+      '</td></tr>';
+  }).join('');
+
+  // The "set it yourself" fallback lists the same chairs.
+  document.getElementById('acct-chair2').innerHTML =
+    data.chairs.map(c => '<option value="' + esc(c.chair) + '">' + esc(c.label) + '</option>').join('');
+}
+
+/* One listener on the table rather than one per button, because the rows
+   are rebuilt after every action. */
+document.getElementById('accounts-body').addEventListener('click', async ev => {
+  const btn = ev.target.closest('button[data-act]');
+  if (!btn) return;
+  const row = btn.closest('tr');
+  const chair = row.dataset.chair;
+  const msg = document.getElementById('accounts-msg');
+  const box = document.getElementById('accounts-link-box');
+
+  if (btn.dataset.act === 'reset') {
+    const label = row.querySelector('strong').textContent;
+    if (!confirm(label + ' will go back to the password held in Vercel, and the one he '
+               + 'chose will stop working. Continue?')) return;
+    msg.innerHTML = '<span class="spinner"></span>Clearing…';
+    try {
+      const res = await fetch('/api/password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', body: JSON.stringify({ reset: chair })
+      });
+      const data = await res.json().catch(() => ({}));
+      msg.textContent = res.ok ? data.detail : (data.detail || data.error || ('Server returned ' + res.status));
+      if (res.ok) { toast('Cleared.', 'ok'); loadAccounts(); }
+    } catch (err) { msg.textContent = err.message; }
+    return;
+  }
+
+  const email = row.querySelector('input[type=email]').value.trim();
+  box.innerHTML = '';
+  msg.innerHTML = '<span class="spinner"></span>Creating the link…';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify({ chair, email })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      msg.textContent = data.error === 'no_password_store'
+        ? 'The password store is not set up yet.'
+        : (data.detail || data.error || ('Server returned ' + res.status));
+      return;
+    }
+    /* The link is shown whether or not the email went, so a mail failure
+       never costs the invitation — it can always be passed on by hand. */
+    msg.textContent = data.emailed && data.emailed.sent
+      ? 'Emailed to ' + data.emailed.to + '. It expires in seven days.'
+      : 'Link ready for ' + data.label + '. Send it however you like — it expires in seven days.';
+    if (data.emailed && !data.emailed.sent && email) {
+      msg.textContent += ' (Email not sent: ' + data.emailed.reason + ')';
+    }
+    box.innerHTML = '<input type="text" readonly value="' + esc(data.link) + '"' +
+      ' style="width:100%;margin-top:10px;font-size:13px" onclick="this.select()">' +
+      '<button class="btn btn-sm" type="button" id="acct-copy" style="margin-top:8px">Copy link</button>';
+    document.getElementById('acct-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(data.link).then(
+        () => toast('Link copied.', 'ok'),
+        () => toast('Select the link and copy it.', 'bad'));
+    });
+    loadAccounts();
+  } catch (err) {
+    msg.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('acct-set').addEventListener('click', async () => {
+  const msg = document.getElementById('accounts-msg');
+  const chair = document.getElementById('acct-chair2').value;
+  const given = document.getElementById('acct-password').value;
+  if (given.length < 10) { msg.textContent = 'Use at least 10 characters.'; return; }
+  msg.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    const res = await fetch('/api/password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify({ setFor: chair, newPassword: given })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      msg.textContent = data.label + ' can now sign in with that password.';
+      document.getElementById('acct-password').value = '';
+      toast(data.label + ' password set.', 'ok');
+      loadAccounts();
+    } else {
+      msg.textContent = data.detail || data.error || ('Server returned ' + res.status);
+    }
+  } catch (err) { msg.textContent = err.message; }
+});
+
+/* ---------------------------------------------------------------------
    ADMIN SUB-TABS
    --------------------------------------------------------------------- */
 document.querySelectorAll('.admin-subtab').forEach(btn => {
@@ -4423,6 +4523,7 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
     if (btn.dataset.sub === 'activities') loadActivitiesAdmin();
     if (btn.dataset.sub === 'officers') loadOfficersAdmin();
     if (btn.dataset.sub === 'bulletin') loadBulletinAdmin();
+    if (btn.dataset.sub === 'accounts') loadAccounts();
   });
 });
 

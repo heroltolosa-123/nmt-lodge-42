@@ -123,6 +123,11 @@ const SESSION_HOURS  = 8;
    and the variable applies again. */
 export const kvPasswordKey = role => 'nmt:pw:' + role;
 
+/* Set when a chair is invited and cleared when the link is used, purely so
+   the administrator can see who is still waiting. It expires with the
+   invitation itself, so a link left unused simply stops being mentioned. */
+export const kvInvitedKey = role => 'nmt:invited:' + role;
+
 export async function resolvePassword(role) {
   const spec = ROLES[role];
   if (!spec) return { hash: null, source: null };

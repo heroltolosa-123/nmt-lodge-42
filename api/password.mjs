@@ -1,6 +1,7 @@
-import { ROLES, readSession, readBody, json, requireEnv,
-         verifyPassword, hashPassword, resolvePassword, kvPasswordKey } from './_lib.mjs';
-import { kvConfigured, kvSet, kvDel } from './_kv.mjs';
+import { ROLES, VISIBLE_ROLES, readSession, readBody, json, requireEnv,
+         verifyPassword, hashPassword, resolvePassword, kvPasswordKey,
+         kvInvitedKey } from './_lib.mjs';
+import { kvConfigured, kvGet, kvSet, kvDel } from './_kv.mjs';
 
 /* ---------------------------------------------------------------------
    An officer sets their own password.
@@ -41,6 +42,34 @@ export default async function handler(req, res) {
   let body;
   try { body = await readBody(req); } catch { return json(res, 400, { error: 'bad_request' }); }
 
+  /* --- the administrator looking at every chair at once ---------------
+
+     Who already has an account, who has been sent a link, and who has
+     nothing yet. Reports the STATE of each chair and never a hash: a
+     password cannot be read back out of here, only replaced.
+
+     'chosen' means the password lives in the store, which is where both
+     a password the officer set and an opening one the administrator gave
+     end up — the two cannot be told apart, and claiming otherwise would
+     be a lie the Secretary might act on. */
+  if (body.list) {
+    if (session.role !== 'admin') return json(res, 403, { error: 'not_permitted' });
+    const chairs = await Promise.all(Object.entries(VISIBLE_ROLES).map(async ([role, spec]) => {
+      const [stored, invited] = await Promise.all([
+        kvGet(kvPasswordKey(role)).catch(() => null),
+        kvGet(kvInvitedKey(role)).catch(() => null)
+      ]);
+      return {
+        chair: role,
+        label: spec.label,
+        canEdit: !!spec.edit,
+        state: stored ? 'chosen' : (process.env[spec.env] ? 'opening' : 'none'),
+        invitePending: !stored && !!invited
+      };
+    }));
+    return json(res, 200, { chairs, minLength: MIN_LENGTH });
+  }
+
   // --- the administrator clearing someone else's chair ---------------
   if (body.reset) {
     if (session.role !== 'admin') return json(res, 403, { error: 'not_permitted' });
@@ -48,6 +77,7 @@ export default async function handler(req, res) {
     if (!ROLES[target]) return json(res, 400, { error: 'unknown_chair' });
     if (target === 'admin') return json(res, 400, { error: 'cannot_reset_own_chair_this_way' });
     await kvDel(kvPasswordKey(target));
+    await kvDel(kvInvitedKey(target));
     console.log(JSON.stringify({ at: new Date().toISOString(), actor: session.role,
                                  action: 'resetPassword', target }));
     return json(res, 200, {

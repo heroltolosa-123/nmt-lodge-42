@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { ROLES, readSession, readBody, json, requireEnv,
-         hashPassword, kvPasswordKey } from './_lib.mjs';
+         hashPassword, kvPasswordKey, kvInvitedKey } from './_lib.mjs';
 import { kvConfigured, kvGet, kvSet, kvDel } from './_kv.mjs';
 
 /* ---------------------------------------------------------------------
@@ -52,6 +52,7 @@ export default async function handler(req, res) {
 
     await kvSet(kvPasswordKey(chair), hashPassword(next));
     await kvDel(inviteKey(String(body.token)));   // one use only
+    await kvDel(kvInvitedKey(chair));             // no longer waiting
     console.log(JSON.stringify({ at: new Date().toISOString(), actor: chair,
                                  action: 'redeemInvite' }));
     return json(res, 200, { done: true, chair, label: ROLES[chair].label });
@@ -67,6 +68,10 @@ export default async function handler(req, res) {
 
   const token = randomBytes(24).toString('base64url');
   await kvSet(inviteKey(token), chair, INVITE_HOURS * 3600);
+  /* So the administrator's list can show who is still waiting. Given the
+     same lifetime as the invitation, so a link nobody uses stops being
+     reported at the moment it stops working. */
+  await kvSet(kvInvitedKey(chair), new Date().toISOString(), INVITE_HOURS * 3600);
 
   const origin = 'https://' + (req.headers['x-forwarded-host'] || req.headers.host);
   const link = origin + '/#invite=' + token;
