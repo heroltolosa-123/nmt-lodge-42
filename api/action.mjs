@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     return json(res, 400, { error: 'unknown_action', action });
   }
 
-  // All four chairs carry the same authority, as the Lodge asked. The role
+  // Every chair carries the same authority, as the Lodge asked. The role
   // is recorded so the log can say who, which a shared password never could.
   console.log(JSON.stringify({
     at: new Date().toISOString(),

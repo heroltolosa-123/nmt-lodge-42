@@ -44,7 +44,7 @@ export function json(res, status, body, cacheControl) {
 /* =====================================================================
    SESSIONS
 
-   Four accounts, keyed to the chair rather than the person, so an
+   Accounts keyed to the chair rather than the person, so an
    installation in March is a password handover and not four new
    accounts. Passwords are scrypt hashes in the Vercel environment:
    a leak of those settings must not hand someone a password that an
@@ -56,7 +56,8 @@ export const ROLES = {
   wm:        { label: 'Worshipful Master', env: 'PW_WM' },
   sw:        { label: 'Senior Warden',     env: 'PW_SW' },
   jw:        { label: 'Junior Warden',     env: 'PW_JW' },
-  secretary: { label: 'Secretary',         env: 'PW_SECRETARY' }
+  secretary: { label: 'Secretary',         env: 'PW_SECRETARY' },
+  treasurer: { label: 'Treasurer',         env: 'PW_TREASURER' }
 };
 
 const SESSION_COOKIE = 'nmt_session';
