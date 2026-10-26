@@ -1739,6 +1739,7 @@
             </select>
           </div>
         </div>
+        <p class="hint" style="margin-top:12px">A payment marked <strong>Paid</strong> comes straight off the member&rsquo;s arrears, and good standing follows from that. The other statuses are recorded as remarks and leave the balance alone.</p>
         <label class="hint" style="display:block;margin-top:14px">Note (OR number, remarks, etc.)</label>
         <input type="text" id="dues-note" style="width:100%">
         <div class="search-row" style="margin-top:16px">
@@ -4254,7 +4255,22 @@ document.getElementById('dues-save-btn').addEventListener('click', async () => {
       }
     });
     if (result.error) { msg.textContent = result.error; toast(result.error, 'bad'); return; }
-    msg.textContent = 'Payment logged.';
+    /* Say what the payment did to the balance, not just that it saved. A
+       double entry is otherwise invisible until someone reads the roster,
+       and the balance is what decides good standing. */
+    const peso = n => '\u20b1' + Number(n).toLocaleString();
+    if (result.applied) {
+      const nowOwes = Number(result.arrears) || 0;
+      msg.textContent = `${peso(result.applied)} recorded for ${match.fullName}. `
+        + `Arrears ${peso(result.arrearsBefore)} \u2192 ${peso(nowOwes)}`
+        + (nowOwes <= 0 ? ' — now in good standing.' : '.');
+      toast(nowOwes <= 0
+        ? `${match.fullName} is paid up.`
+        : `${match.fullName} still owes ${peso(nowOwes)}.`, 'ok');
+    } else {
+      msg.textContent = 'Recorded as "' + document.getElementById('dues-status').value
+        + '". The balance is unchanged — only a payment marked Paid moves it.';
+    }
     document.getElementById('dues-member-search').value = '';
     document.getElementById('dues-amount').value = '';
     document.getElementById('dues-note').value = '';
