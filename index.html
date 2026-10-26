@@ -4363,6 +4363,19 @@ function currentTermRange() {
    who is still waiting on a link, and who has nothing. A password is
    never shown here because none is ever held — only replaced.
    --------------------------------------------------------------------- */
+/* Server error codes are written for the log, not for the Secretary. */
+const ACCOUNT_ERRORS = {
+  not_signed_in:    'Your session has ended. Sign in again.',
+  not_permitted:    'Only the Lodge Administrator can see this.',
+  no_password_store:'The password store is not set up yet.',
+  unknown_chair:    'That chair is not one the system knows.',
+  too_short:        'Use at least 10 characters.',
+  edge_whitespace:  'Remove the spaces at the start or end.'
+};
+const sayError = (data, status) =>
+  ACCOUNT_ERRORS[data && data.error] || (data && data.detail) ||
+  (data && data.error) || ('Server returned ' + status);
+
 const ACCOUNT_STATE = {
   chosen:  { badge: 'ok',      text: 'Password set' },
   opening: { badge: 'warn',    text: 'Opening password' },
@@ -4380,8 +4393,7 @@ async function loadAccounts() {
     });
     data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      body.innerHTML = '<tr><td colspan="5" class="hint">' +
-        esc(data.detail || data.error || ('Server returned ' + res.status)) + '</td></tr>';
+      body.innerHTML = '<tr><td colspan="5" class="hint">' + esc(sayError(data, res.status)) + '</td></tr>';
       return;
     }
   } catch (err) {
@@ -4436,7 +4448,7 @@ document.getElementById('accounts-body').addEventListener('click', async ev => {
         credentials: 'same-origin', body: JSON.stringify({ reset: chair })
       });
       const data = await res.json().catch(() => ({}));
-      msg.textContent = res.ok ? data.detail : (data.detail || data.error || ('Server returned ' + res.status));
+      msg.textContent = res.ok ? data.detail : sayError(data, res.status);
       if (res.ok) { toast('Cleared.', 'ok'); loadAccounts(); }
     } catch (err) { msg.textContent = err.message; }
     return;
@@ -4453,9 +4465,7 @@ document.getElementById('accounts-body').addEventListener('click', async ev => {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      msg.textContent = data.error === 'no_password_store'
-        ? 'The password store is not set up yet.'
-        : (data.detail || data.error || ('Server returned ' + res.status));
+      msg.textContent = sayError(data, res.status);
       return;
     }
     /* The link is shown whether or not the email went, so a mail failure
@@ -4500,7 +4510,7 @@ document.getElementById('acct-set').addEventListener('click', async () => {
       toast(data.label + ' password set.', 'ok');
       loadAccounts();
     } else {
-      msg.textContent = data.detail || data.error || ('Server returned ' + res.status);
+      msg.textContent = sayError(data, res.status);
     }
   } catch (err) { msg.textContent = err.message; }
 });
