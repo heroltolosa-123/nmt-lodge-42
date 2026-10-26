@@ -1648,8 +1648,12 @@
         <div class="grid-2">
           <div><label class="hint">Status</label><select id="edit-status"></select></div>
           <div><label class="hint">Proficiency (Y/N)</label><select id="edit-proficiency"><option value=""></option><option>Y</option><option>N</option></select></div>
-          <div><label class="hint">In Good Standing (Y/N)</label><select id="edit-goodstanding"><option value=""></option><option>Y</option><option>N</option></select></div>
-          <div><label class="hint">Legacy Arrears (₱)</label><input type="text" id="edit-arrears"></div>
+          <div>
+            <label class="hint">In Good Standing</label>
+            <p class="hint" id="edit-goodstanding-note" role="status" aria-live="polite"
+               style="margin:0;padding:13px 2px;font-size:16px">&mdash;</p>
+          </div>
+          <div><label class="hint">Arrears (&#8369;) &mdash; this is what decides good standing</label><input type="text" id="edit-arrears" inputmode="numeric"></div>
         </div>
         <label class="hint" style="display:block;margin-top:14px">Remarks</label>
         <input type="text" id="edit-remarks" style="width:100%">
@@ -4044,6 +4048,38 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
 /* ---------------------------------------------------------------------
    EDIT MEMBER
    --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   GOOD STANDING is not typed in. A brother is in good standing when he
+   owes nothing AND is still on the active roll — a suspended, expelled or
+   deceased brother is not, whatever his dues column says. Their arrears
+   read zero because they are off the books, not because they paid, which
+   is how 34 brethren came to owe dues and still be marked in good standing.
+
+   Shown here as it will be saved, so the reason is visible while editing.
+   --------------------------------------------------------------------- */
+const INACTIVE_STATUS = /suspend|expel|decease|dropped|demit/i;
+
+function refreshGoodStanding() {
+  const note = document.getElementById('edit-goodstanding-note');
+  if (!note) return;
+  const status = document.getElementById('edit-status').value || '';
+  const owed = Number(String(document.getElementById('edit-arrears').value).replace(/[^0-9.-]/g, '')) || 0;
+  if (INACTIVE_STATUS.test(status)) {
+    note.innerHTML = ynIcon('N') + ' No — ' + esc(status.toLowerCase());
+  } else if (owed > 0) {
+    note.innerHTML = ynIcon('N') + ' No — owes \u20b1' + owed.toLocaleString();
+  } else {
+    note.innerHTML = ynIcon('Y') + ' Yes — nothing owing';
+  }
+}
+
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'edit-arrears') refreshGoodStanding();
+});
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'edit-status') refreshGoodStanding();
+});
+
 function updatePhotoPreview(url, targetId) {
   const el = document.getElementById(targetId);
   el.innerHTML = url ? avatarHtml({ fullName: '', photoUrl: url }, 'avatar-sm') : '';
@@ -4057,8 +4093,8 @@ function openEditMember(memberId) {
   const statusSel = document.getElementById('edit-status');
   statusSel.innerHTML = STATUS_OPTIONS.map(s => `<option ${s === m.status ? 'selected' : ''}>${s}</option>`).join('');
   document.getElementById('edit-proficiency').value = m.proficiency || '';
-  document.getElementById('edit-goodstanding').value = m.goodStanding || '';
   document.getElementById('edit-arrears').value = m.arrears || 0;
+  refreshGoodStanding();
   document.getElementById('edit-remarks').value = m.remarks || '';
   document.getElementById('edit-dob').value = m.dateOfBirth || '';
   document.getElementById('edit-contact').value = m.contactNumber || '';
@@ -4085,7 +4121,7 @@ document.getElementById('edit-save-btn').addEventListener('click', async () => {
       fields: {
         status: document.getElementById('edit-status').value,
         proficiency: document.getElementById('edit-proficiency').value,
-        goodStanding: document.getElementById('edit-goodstanding').value,
+        // goodStanding is not sent: it is worked out from status and arrears.
         legacyArrears: document.getElementById('edit-arrears').value,
         remarks: document.getElementById('edit-remarks').value,
         dateOfBirth: document.getElementById('edit-dob').value,
