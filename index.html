@@ -4590,7 +4590,8 @@ async function loadPhotoQueue() {
       <img src="/api/photo?k=${esc(req.photo)}" alt="Submitted picture of ${esc(req.fullName)}" loading="lazy">
       <div class="photo-req-who">
         <strong>${esc(req.fullName)}</strong>
-        <div class="hint">${member ? '' : 'Not matched on the roster — approving is not possible.'}</div>
+        <div class="hint">${member ? '' : 'No brother of this name on the roster now. '
+            + 'If his name was changed in the sheet, reject this and ask him to send it again.'}</div>
       </div>
       <div style="white-space:nowrap">
         ${member ? '<button class="btn btn-sm" type="button" data-act="approve">Approve</button> ' : ''}
