@@ -39,6 +39,21 @@ function describeHash(v) {
   return { set: true, length: s.length, ok: true };
 }
 
+/* Email is optional: without it an invitation link is simply handed over by
+   the Secretary instead of posted. Reports shape only — echoing MAIL_FROM
+   from a public endpoint would publish the Lodge's address to anyone. */
+function describeEmail() {
+  const key = (process.env.BREVO_API_KEY || '').trim();
+  const from = (process.env.MAIL_FROM || '').trim();
+  if (!key && !from) return { set: false, note: 'links are passed on by hand' };
+  const out = { set: !!(key && from), key: { set: !!key }, from: { set: !!from } };
+  if (key && !/^xkeysib-/.test(key)) out.key.problem = 'does not start with "xkeysib-" — this may not be a Brevo API key';
+  if (from && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(from)) out.from.problem = 'does not look like an email address';
+  if (key && !from) out.problem = 'MAIL_FROM is missing';
+  if (from && !key) out.problem = 'BREVO_API_KEY is missing';
+  return out;
+}
+
 export default async function handler(req, res) {
   const out = {
     appsScriptUrl: { set: !!process.env.APPS_SCRIPT_URL },
@@ -50,6 +65,7 @@ export default async function handler(req, res) {
     // Whether officers can set their own passwords yet. Without it every
     // chair falls back to its environment variable, which still works.
     passwordStore: { set: kvConfigured() },
+    email: describeEmail(),
     chairs: {}
   };
   /* A hidden chair is reported only to someone already signed in. Listing it
@@ -63,16 +79,6 @@ export default async function handler(req, res) {
   }
   out.readyToSignIn = out.sessionSecret.set &&
     Object.values(out.chairs).some(c => c.ok);
-
-  /* ?check=upstream also asks Apps Script whether LODGE_ADMIN_KEY is the
-     password it expects. Opt-in, because it costs a 3-4s round trip and
-     this endpoint is otherwise instant. Reports only whether the key was
-     accepted — never the key, never a member. */
-  // Vercel populates req.query; req.url may or may not carry the string,
-  // so read both rather than depending on which.
-  const wantsUpstream = (req.query && req.query.check === 'upstream')
-    || /[?&]check=upstream/.test(req.url || '');
-
 
   json(res, 200, out);
 }

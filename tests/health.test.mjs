@@ -66,3 +66,44 @@ await h3({ headers: { cookie } }, inside);
 assert.ok(inside.body.chairs.admin, 'a signed-in caller must be able to diagnose the hidden chair');
 assert.ok(inside.body.chairs.admin.ok, 'and see whether its hash parses');
 console.log('PASS  hidden chair invisible to the public, diagnosable once signed in');
+
+/* Email: optional, so "not configured" is a note and not a fault. The one
+   thing that must never happen is the Lodge's own address being published
+   from a public endpoint, so assert the value itself stays out. */
+async function emailReport(v) {
+  const r = { headers:{}, statusCode:0, body:null, setHeader(){}, end(b){this.body=JSON.parse(b)} };
+  const { default: h } = await import('../api/health.mjs?v=' + v);
+  await h({ headers: {} }, r);
+  return r.body;
+}
+
+delete process.env.BREVO_API_KEY;
+delete process.env.MAIL_FROM;
+let b = await emailReport('e1');
+assert.strictEqual(b.email.set, false, 'no email configuration is not an error');
+assert.ok(/by hand/.test(b.email.note), 'it must say what happens without email');
+
+process.env.BREVO_API_KEY = 'xkeysib-' + 'a'.repeat(64);
+process.env.MAIL_FROM = 'lodge@example.org';
+b = await emailReport('e2');
+assert.strictEqual(b.email.set, true, 'a key plus a sender is configured');
+assert.ok(!b.email.key.problem && !b.email.from.problem, 'a good pair must report no problem');
+assert.ok(!JSON.stringify(b).includes('lodge@example.org'), 'health must not publish MAIL_FROM');
+assert.ok(!JSON.stringify(b).includes(process.env.BREVO_API_KEY), 'health must not echo the API key');
+
+process.env.BREVO_API_KEY = 'some-other-providers-key';
+b = await emailReport('e3');
+assert.ok(/xkeysib/.test(b.email.key.problem), 'a non-Brevo key must be named as such');
+
+process.env.BREVO_API_KEY = 'xkeysib-' + 'a'.repeat(64);
+process.env.MAIL_FROM = 'not-an-address';
+b = await emailReport('e4');
+assert.ok(/email address/.test(b.email.from.problem), 'a malformed sender must be named');
+
+delete process.env.MAIL_FROM;
+b = await emailReport('e5');
+assert.strictEqual(b.email.set, false, 'a key with no sender is not configured');
+assert.ok(/MAIL_FROM is missing/.test(b.email.problem), 'the missing half must be named');
+
+console.log('PASS  email reported by shape: unset, good, wrong key, bad sender, half-set');
+console.log('PASS  neither the API key nor the sender address is ever published');
