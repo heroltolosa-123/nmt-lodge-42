@@ -128,6 +128,12 @@ export const kvPasswordKey = role => 'nmt:pw:' + role;
    invitation itself, so a link left unused simply stops being mentioned. */
 export const kvInvitedKey = role => 'nmt:invited:' + role;
 
+/* An officer with no password cannot sign in to ask for one, so the sign-in
+   screen lets him leave the request here. It is a request and nothing more:
+   no link, no password, nothing he could use. The administrator sees it and
+   decides. */
+export const kvRequestKey = role => 'nmt:askedfor:' + role;
+
 export async function resolvePassword(role) {
   const spec = ROLES[role];
   if (!spec) return { hash: null, source: null };

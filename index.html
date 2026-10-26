@@ -1577,6 +1577,28 @@
         <button class="btn" id="admin-unlock-btn">Sign In</button>
       </div>
       <div id="admin-lock-msg" class="hint"></div>
+
+      <!-- For the chairs that have never had a password: there is no way in
+           to ask for one, so the door is here, on the outside. -->
+      <details id="need-password" style="margin-top:20px">
+        <summary>First time signing in, or forgotten your password?</summary>
+        <p class="hint" style="margin-top:10px">
+          Choose your chair and give the address the Lodge can reach you at.
+          The Lodge Administrator will send you a one-time link, and you choose
+          your own password &mdash; nobody else ever sees it, him included.</p>
+        <div class="lock-form" style="margin-top:12px">
+          <label class="lock-field">
+            <span>Your chair</span>
+            <select id="ask-chair"></select>
+          </label>
+          <label class="lock-field">
+            <span>Your email</span>
+            <input type="email" id="ask-email" autocomplete="email" placeholder="brother@example.com">
+          </label>
+          <button class="btn" type="button" id="ask-send">Ask for a link</button>
+        </div>
+        <p class="hint" id="ask-msg" role="status" aria-live="polite"></p>
+      </details>
     </div>
 
     <div id="admin-content" style="display:none">
@@ -4371,6 +4393,41 @@ function currentTermRange() {
 })();
 
 /* ---------------------------------------------------------------------
+   ASKING FOR A LINK
+
+   An officer who has never been given a password cannot sign in to ask
+   for one. This sends the request; it receives nothing back that could
+   be used to sign in, because the administrator is still the one who
+   issues the link.
+   --------------------------------------------------------------------- */
+(function wireAskForLink() {
+  const chairs = document.getElementById('ask-chair');
+  // The same chairs the sign-in form offers, so the administrator's is
+  // absent here exactly as it is there.
+  chairs.innerHTML = document.getElementById('admin-role').innerHTML;
+
+  document.getElementById('ask-send').addEventListener('click', async () => {
+    const msg = document.getElementById('ask-msg');
+    const email = document.getElementById('ask-email').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      msg.textContent = 'Give an email address the Lodge can reach you at.';
+      return;
+    }
+    msg.innerHTML = '<span class="spinner"></span>Sending…';
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request: true, chair: chairs.value, email })
+      });
+      msg.textContent = res.ok
+        ? 'Asked. The Lodge Administrator will send your link to ' + email + '.'
+        : 'Could not send the request. Tell the Secretary instead.';
+      if (res.ok) document.getElementById('ask-send').disabled = true;
+    } catch { msg.textContent = 'Could not reach the Lodge server.'; }
+  });
+})();
+
+/* ---------------------------------------------------------------------
    OFFICER ACCOUNTS
 
    The administrator's view of the whole line: who can already sign in,
@@ -4419,12 +4476,14 @@ async function loadAccounts() {
     const state = ACCOUNT_STATE[c.state] || ACCOUNT_STATE.none;
     const account = c.invitePending
       ? '<span class="badge warn">Link sent, not used yet</span>'
-      : '<span class="badge ' + state.badge + '">' + state.text + '</span>';
+      : '<span class="badge ' + state.badge + '">' + state.text + '</span>' +
+        (c.requestedBy ? ' <span class="badge bad">Asked for a link</span>' : '');
     return '<tr data-chair="' + esc(c.chair) + '">' +
       '<td><strong>' + esc(c.label) + '</strong></td>' +
       '<td class="hint">' + (c.canEdit ? 'Can change records' : 'View only') + '</td>' +
       '<td>' + account + '</td>' +
       '<td><input type="email" autocomplete="off" placeholder="brother@example.com" ' +
+          'value="' + esc(c.requestedBy || '') + '" ' +
           'aria-label="Email for ' + esc(c.label) + '"></td>' +
       '<td style="white-space:nowrap">' +
         '<button class="btn btn-sm" type="button" data-act="invite">' +

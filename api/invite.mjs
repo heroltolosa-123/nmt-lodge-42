@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { ROLES, readSession, readBody, json, requireEnv,
-         hashPassword, kvPasswordKey, kvInvitedKey } from './_lib.mjs';
+import { ROLES, VISIBLE_ROLES, readSession, readBody, json, requireEnv,
+         hashPassword, kvPasswordKey, kvInvitedKey, kvRequestKey } from './_lib.mjs';
 import { kvConfigured, kvGet, kvSet, kvDel } from './_kv.mjs';
 
 /* ---------------------------------------------------------------------
@@ -20,6 +20,7 @@ import { kvConfigured, kvGet, kvSet, kvDel } from './_kv.mjs';
    --------------------------------------------------------------------- */
 
 const INVITE_HOURS = 24 * 7;
+const REQUEST_DAYS = 30;
 const MIN_LENGTH   = 10;
 const inviteKey = token => 'nmt:invite:' + token;
 
@@ -53,9 +54,44 @@ export default async function handler(req, res) {
     await kvSet(kvPasswordKey(chair), hashPassword(next));
     await kvDel(inviteKey(String(body.token)));   // one use only
     await kvDel(kvInvitedKey(chair));             // no longer waiting
+    await kvDel(kvRequestKey(chair));
     console.log(JSON.stringify({ at: new Date().toISOString(), actor: chair,
                                  action: 'redeemInvite' }));
     return json(res, 200, { done: true, chair, label: ROLES[chair].label });
+  }
+
+  /* ---- an officer asking for a link, signed in to nothing --------------
+
+     The chairs that have never been given a password cannot sign in, so
+     there is no door they could knock on from the inside. This is that
+     door — and it deliberately issues NOTHING. It records that a brother
+     asked, and the administrator still presses the button.
+
+     Handing out a link here instead would mean anyone who can open the
+     page could take the Master's chair by naming it and giving their own
+     address, which is the whole reason it works this way.
+
+     Three things keep it quiet without a rate limiter: only a chair that
+     appears on the sign-in form can be named, so the administrator's own
+     cannot; the first request for a chair is kept and later ones are
+     ignored, so nobody can overwrite a brother's address with their own;
+     and the answer is the same whatever is asked, so nothing can be
+     learned by asking. At most one small record per chair can exist. */
+  if (body.request) {
+    const asked = String(body.chair || '').toLowerCase();
+    const email = String(body.email || '').trim();
+    const usable = VISIBLE_ROLES[asked] &&
+                   email.length <= 254 &&
+                   /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+    if (usable && !(await kvGet(kvRequestKey(asked)))) {
+      await kvSet(kvRequestKey(asked),
+                  JSON.stringify({ email, at: new Date().toISOString() }),
+                  REQUEST_DAYS * 24 * 3600);
+      console.log(JSON.stringify({ at: new Date().toISOString(), actor: 'anonymous',
+                                   action: 'askedForLink', target: asked }));
+    }
+    // Always the same answer, whether or not anything was recorded.
+    return json(res, 200, { asked: true });
   }
 
   // ---- creating: administrator only ---------------------------------
@@ -72,6 +108,7 @@ export default async function handler(req, res) {
      same lifetime as the invitation, so a link nobody uses stops being
      reported at the moment it stops working. */
   await kvSet(kvInvitedKey(chair), new Date().toISOString(), INVITE_HOURS * 3600);
+  await kvDel(kvRequestKey(chair));   // asked and answered
 
   const origin = 'https://' + (req.headers['x-forwarded-host'] || req.headers.host);
   const link = origin + '/#invite=' + token;

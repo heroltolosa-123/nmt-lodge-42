@@ -1,6 +1,6 @@
 import { ROLES, VISIBLE_ROLES, readSession, readBody, json, requireEnv,
          verifyPassword, hashPassword, resolvePassword, kvPasswordKey,
-         kvInvitedKey } from './_lib.mjs';
+         kvInvitedKey, kvRequestKey } from './_lib.mjs';
 import { kvConfigured, kvGet, kvSet, kvDel } from './_kv.mjs';
 
 /* ---------------------------------------------------------------------
@@ -55,16 +55,22 @@ export default async function handler(req, res) {
   if (body.list) {
     if (session.role !== 'admin') return json(res, 403, { error: 'not_permitted' });
     const chairs = await Promise.all(Object.entries(VISIBLE_ROLES).map(async ([role, spec]) => {
-      const [stored, invited] = await Promise.all([
+      const [stored, invited, asked] = await Promise.all([
         kvGet(kvPasswordKey(role)).catch(() => null),
-        kvGet(kvInvitedKey(role)).catch(() => null)
+        kvGet(kvInvitedKey(role)).catch(() => null),
+        kvGet(kvRequestKey(role)).catch(() => null)
       ]);
+      let requestedBy = null;
+      // Written by an anonymous caller, so it is parsed defensively and
+      // only ever leaves here as a plain address for the administrator.
+      try { requestedBy = asked ? (JSON.parse(asked).email || null) : null; } catch { requestedBy = null; }
       return {
         chair: role,
         label: spec.label,
         canEdit: !!spec.edit,
         state: stored ? 'chosen' : (process.env[spec.env] ? 'opening' : 'none'),
-        invitePending: !stored && !!invited
+        invitePending: !stored && !!invited,
+        requestedBy
       };
     }));
     return json(res, 200, { chairs, minLength: MIN_LENGTH });
@@ -78,6 +84,7 @@ export default async function handler(req, res) {
     if (target === 'admin') return json(res, 400, { error: 'cannot_reset_own_chair_this_way' });
     await kvDel(kvPasswordKey(target));
     await kvDel(kvInvitedKey(target));
+    await kvDel(kvRequestKey(target));
     console.log(JSON.stringify({ at: new Date().toISOString(), actor: session.role,
                                  action: 'resetPassword', target }));
     return json(res, 200, {
