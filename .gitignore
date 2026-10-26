@@ -1,0 +1,27 @@
+# This repository is PUBLIC. Member data must never be committed to it.
+#
+# The lodge roster — names, birthdays, home addresses, dues, attendance —
+# lives in the Google Sheet and is served at runtime through /api/*, which
+# whitelists the handful of fields the public page is allowed to see
+# (api/_lib.mjs, PUBLIC_FIELDS). Keep it that way: anything committed here is
+# public immediately and stays in the git history permanently, even if the
+# file is deleted in a later commit.
+
+# Secretary's workbooks and anything generated from them
+*.xlsx
+*.xls
+*.csv
+RSM_*.pdf
+IMPORT-REPORT.md
+
+# Apps Script project — import-*.js embeds roster data
+appscript/
+import-*.js
+*.gs
+
+# Local environment
+.env
+.env.*
+.vercel/
+node_modules/
+.DS_Store
