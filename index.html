@@ -3535,6 +3535,29 @@ async function signOut() {
   document.getElementById('admin-pass').value = '';
   toast('Signed out.', 'ok');
 }
+/* ---------------------------------------------------------------------
+   The administrator's chair is not on the form. Opening the page with
+   #admin in the address puts it there.
+
+   A fragment never leaves the browser — it is not sent with the request,
+   so it stays out of the server logs a query string would land in. That
+   is about discretion, not protection: the password is what guards the
+   chair, and /api/login answers an unknown chair exactly as it answers a
+   wrong password, so the name cannot be found by probing either.
+   --------------------------------------------------------------------- */
+(function revealAdminChair() {
+  if (location.hash.replace(/^#/, '').toLowerCase() !== 'admin') return;
+  const sel = document.getElementById('admin-role');
+  if (!sel || sel.querySelector('option[value="admin"]')) return;
+  const opt = document.createElement('option');
+  opt.value = 'admin';
+  opt.textContent = 'Lodge Administrator';
+  sel.appendChild(opt);
+  sel.value = 'admin';
+  // Take it back out of the address so it does not sit in the history.
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+
 document.getElementById('admin-unlock-btn').addEventListener('click', unlockAdmin);
 document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.key === 'Enter') unlockAdmin(); });
 

@@ -57,8 +57,20 @@ export const ROLES = {
   sw:        { label: 'Senior Warden',     env: 'PW_SW' },
   jw:        { label: 'Junior Warden',     env: 'PW_JW' },
   secretary: { label: 'Secretary',         env: 'PW_SECRETARY' },
-  treasurer: { label: 'Treasurer',         env: 'PW_TREASURER' }
+  treasurer: { label: 'Treasurer',         env: 'PW_TREASURER' },
+
+  /* Not offered on the sign-in form, for the brother who keeps the system
+     rather than a chair. `hidden` only keeps it out of the form and out of
+     the public health report — it is not what makes it safe. The password
+     is. /api/login answers unknown chair, unset password and wrong password
+     with the same 401, so the name cannot be found by probing either. */
+  admin:     { label: 'Lodge Administrator', env: 'PW_ADMIN', hidden: true }
 };
+
+/* The chairs the sign-in form offers. */
+export const VISIBLE_ROLES = Object.fromEntries(
+  Object.entries(ROLES).filter(([, spec]) => !spec.hidden)
+);
 
 const SESSION_COOKIE = 'nmt_session';
 const SESSION_HOURS  = 8;

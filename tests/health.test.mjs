@@ -42,3 +42,27 @@ assert.strictEqual(res2.body.chairs.wm.length, 161, 'a de-prefixed hash is 161 c
 assert.ok(/prefix is missing/.test(res2.body.chairs.wm.problem),
   'a de-prefixed hash must be named exactly, not called a plain password');
 console.log('PASS  a hash missing its scrypt: prefix is diagnosed precisely');
+
+/* The administrator's chair is not on the sign-in form; listing it in a public
+   health report would put it straight back. It is reported to a caller who is
+   already signed in, so it can still be diagnosed. */
+import { ROLES, signToken, newSession } from '../api/_lib.mjs';
+process.env.PW_ADMIN = good;
+
+const anon = { headers:{}, statusCode:0, body:null, setHeader(){}, end(b){this.body=JSON.parse(b)} };
+const { default: h3 } = await import('../api/health.mjs?v=3');
+await h3({ headers: {} }, anon);
+assert.strictEqual(anon.body.chairs.admin, undefined, 'a hidden chair must not appear publicly');
+for (const [role, spec] of Object.entries(ROLES))
+  if (!spec.hidden) assert.ok(anon.body.chairs[role], 'a visible chair must still be reported: ' + role);
+// (lodgeAdminKey legitimately contains "admin", so check the chairs alone)
+for (const [role, spec] of Object.entries(ROLES))
+  if (spec.hidden) assert.ok(!JSON.stringify(anon.body.chairs).includes(role),
+    'the public chair list must not name ' + role);
+
+const cookie = 'nmt_session=' + signToken(newSession('wm'), process.env.SESSION_SECRET);
+const inside = { headers:{}, statusCode:0, body:null, setHeader(){}, end(b){this.body=JSON.parse(b)} };
+await h3({ headers: { cookie } }, inside);
+assert.ok(inside.body.chairs.admin, 'a signed-in caller must be able to diagnose the hidden chair');
+assert.ok(inside.body.chairs.admin.ok, 'and see whether its hash parses');
+console.log('PASS  hidden chair invisible to the public, diagnosable once signed in');

@@ -1,4 +1,4 @@
-import { ROLES, json } from './_lib.mjs';
+import { ROLES, json, readSession } from './_lib.mjs';
 
 /* ---------------------------------------------------------------------
    Configuration check.
@@ -48,7 +48,13 @@ export default async function handler(req, res) {
     },
     chairs: {}
   };
+  /* A hidden chair is reported only to someone already signed in. Listing it
+     here would undo the hiding, and this endpoint is public so that an
+     officer who cannot sign in can still see why. */
+  let signedIn = false;
+  try { signedIn = !!readSession(req, process.env.SESSION_SECRET); } catch { /* unconfigured */ }
   for (const [role, spec] of Object.entries(ROLES)) {
+    if (spec.hidden && !signedIn) continue;
     out.chairs[role] = describeHash(process.env[spec.env]);
   }
   out.readyToSignIn = out.sessionSecret.set &&

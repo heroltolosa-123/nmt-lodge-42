@@ -1,7 +1,7 @@
 // Run:  node tests/auth.test.mjs
 import assert from 'node:assert';
 import { hashPassword, verifyPassword, signToken, verifyToken,
-         newSession, readSession, sessionCookie, ROLES } from '../api/_lib.mjs';
+         newSession, readSession, sessionCookie, ROLES, VISIBLE_ROLES } from '../api/_lib.mjs';
 
 const SECRET = 'test-secret-value';
 
@@ -76,10 +76,23 @@ const html = readFileSync(join(HERE, '..', 'index.html'), 'utf8');
 const select = html.slice(html.indexOf('<select id="admin-role">'));
 const offered = [...select.slice(0, select.indexOf('</select>'))
   .matchAll(/<option value="([^"]+)"/g)].map(m => m[1]);
-for (const role of Object.keys(ROLES))
-  assert.ok(offered.includes(role), 'the sign-in form does not offer ' + role);
+for (const [role, spec] of Object.entries(ROLES)) {
+  if (spec.hidden) {
+    assert.ok(!offered.includes(role), 'a hidden chair must not sit in the form markup: ' + role);
+  } else {
+    assert.ok(offered.includes(role), 'the sign-in form does not offer ' + role);
+  }
+}
 for (const role of offered)
   assert.ok(ROLES[role], 'the form offers "' + role + '", which is not a chair');
-console.log(`PASS  ${Object.keys(ROLES).length} chairs, each signable and offered on the form`);
+
+// The hidden chair must still be a real one that can hold a session, or it
+// would be an option that can never be signed into.
+assert.ok(ROLES.admin && ROLES.admin.hidden, 'the administrator chair is missing or not hidden');
+assert.strictEqual(VISIBLE_ROLES.admin, undefined, 'the administrator must not be a visible chair');
+assert.deepStrictEqual(Object.keys(VISIBLE_ROLES).sort(), offered.slice().sort(),
+  'VISIBLE_ROLES and the form have drifted apart');
+const hidden = Object.values(ROLES).filter(r => r.hidden).length;
+console.log(`PASS  ${offered.length} chairs on the form, ${hidden} hidden, each signable`);
 
 console.log('\nall checks passed');
