@@ -968,6 +968,8 @@
      courtesy — /api/password refuses the listing to every other chair. */
   .admins-only{ display:none }
   #admin-content.is-admin .admins-only{ display:inline-block }
+  .roster-name{ display:flex; align-items:center; gap:10px }
+  .roster-name .avatar-sm, .roster-name .avatar-fallback{ flex:none }
   .photo-req{ display:flex; gap:16px; align-items:center; flex-wrap:wrap;
     padding:14px 0; border-bottom:1px solid var(--line) }
   .photo-req:last-child{ border-bottom:none }
@@ -4071,8 +4073,8 @@ function renderTable() {
     .forEach(m => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${m.fullName}</td>
-        <td>${m.yearRaised || '—'}</td>
+        <td><span class="roster-name">${avatarHtml(m, 'avatar-sm')}<span>${esc(m.fullName)}</span></span></td>
+        <td>${esc(m.yearRaised || '—')}</td>
         <td><span class="badge ${statusBadgeClass(m.status)}">${m.status || '—'}</span></td>
         <td>${ynIcon(m.goodStanding)}</td>
         <td>${m.attendanceTotal ?? '—'}</td>
