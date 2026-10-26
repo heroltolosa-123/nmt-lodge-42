@@ -970,6 +970,20 @@
   #admin-content.is-admin .admins-only{ display:inline-block }
   #accounts-table td{ vertical-align:middle }
   #accounts-table input[type=email]{ width:100%; min-width:190px; font-size:13px; padding:8px 10px }
+  /* On a phone the row is wider than the screen, which puts the Invite
+     button behind a sideways scroll — the one control the Secretary came
+     for. Each chair becomes its own stacked block instead. */
+  @media (max-width:720px){
+    #sub-accounts .table-wrap{ overflow:visible }
+    #accounts-table thead{ display:none }
+    #accounts-table, #accounts-table tbody, #accounts-table tr, #accounts-table td{
+      display:block; width:100% }
+    #accounts-table tr{ padding:14px 0; border-bottom:1px solid var(--line) }
+    #accounts-table td{ border:none; padding:4px 0 }
+    #accounts-table td:nth-child(2){ font-size:12.5px }
+    #accounts-table input[type=email]{ min-width:0; margin-top:4px }
+    #accounts-table td:last-child{ margin-top:8px }
+  }
   table{ width:100%; border-collapse:collapse; margin-top:10px; font-size:14px }
   th, td{ text-align:left; padding:11px 13px; border-bottom:1px solid var(--line) }
   th{
