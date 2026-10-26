@@ -144,16 +144,27 @@ assert.strictEqual(upstreamCalls.length, 1, 'the sheet is written exactly once')
 assert.strictEqual(upstreamCalls[0].action, 'updateMember');
 assert.strictEqual(upstreamCalls[0].memberId, 'M-0042');
 assert.strictEqual(upstreamCalls[0].key, 'the-lodge-key', 'the Lodge key is attached server side');
-assert.ok(/^https:\/\/nmt-lodge-42\.vercel\.app\/api\/photo\?k=[0-9a-f]{24}$/.test(upstreamCalls[0].photoUrl),
+
+/* The Apps Script reads body.fields and nothing else:
+     updateMember_(body.memberId, body.fields || {})
+   Sent flat, it writes nothing and still answers updated:true. This
+   shipped once and reported success while changing nothing, so the
+   assertion is on the nesting, not merely on the value being present
+   somewhere in the payload. */
+assert.ok(upstreamCalls[0].fields, 'the payload must carry a fields object');
+assert.strictEqual(upstreamCalls[0].photoUrl, undefined,
+  'a flat photoUrl is silently ignored by the script — it must be nested');
+const sentUrl = upstreamCalls[0].fields.photoUrl;
+assert.ok(/^https:\/\/nmt-lodge-42\.vercel\.app\/api\/photo\?k=[0-9a-f]{24}$/.test(sentUrl),
   'the portrait address is this site and an opaque key');
-assert.ok(!upstreamCalls[0].photoUrl.includes('M-0042'),
+assert.ok(!sentUrl.includes('M-0042'),
   'a member id must never appear in a public portrait address');
 assert.strictEqual(JSON.parse(store.get('nmt:photoreqs'))[normalise('Juan P. Abad')], undefined,
   'the request is cleared once the sheet has it');
 console.log('PASS  approving writes the sheet once, with an opaque address, then clears the request');
 
 // ---- the approved portrait is served ------------------------------------
-const key = upstreamCalls[0].photoUrl.split('k=')[1];
+const key = upstreamCalls[0].fields.photoUrl.split('k=')[1];
 let img = await get(key);
 assert.ok(Buffer.isBuffer(img.body), 'the bytes come back');
 assert.strictEqual(img.headers['content-type'], 'image/png');

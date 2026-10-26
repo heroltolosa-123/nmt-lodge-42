@@ -123,7 +123,12 @@ export default async function handler(req, res) {
       const upstream = await fetch(scriptUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'updateMember', memberId, photoUrl, key: adminKey }),
+        /* The script reads body.fields — `updateMember_(body.memberId,
+           body.fields || {})`. Sent flat, it finds no fields, writes
+           nothing and still answers updated:true, which is how this
+           shipped once reporting success and changing nothing. */
+        body: JSON.stringify({ action: 'updateMember', memberId,
+                               fields: { photoUrl }, key: adminKey }),
         redirect: 'follow'
       });
       if (!upstream.ok) return json(res, 502, { error: 'upstream_' + upstream.status });
