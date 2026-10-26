@@ -42,11 +42,20 @@ console.log('PASS  search by surname works');
 
 // 3. THE guarantee: private fields never leave
 const PRIVATE = ['memberId','surname','firstName','middleName','dateOfBirth',
-                 'contactNumber','email','address','occupation','photoUrl','remarks'];
+                 'contactNumber','email','address','occupation','remarks'];
+// photoUrl is deliberately public - Find My Status shows the portrait. Asserted
+// below so it cannot be dropped again by tightening the whitelist.
+const REQUIRED_PUBLIC = ['photoUrl'];
 const all = (await call('cru')).body.matches.concat(r1.body.matches);
 for (const m of all) for (const f of PRIVATE)
   assert.ok(!(f in m), `LEAK: ${f} reached the client`);
 console.log('PASS  no private field reaches the client');
+
+// 3b. the portrait must survive the whitelist, or Find My Status loses its faces
+const withPhoto = all.find(m => m.fullName === 'Manuel de Santos');
+for (const f of REQUIRED_PUBLIC)
+  assert.ok(withPhoto && f in withPhoto, `${f} was stripped - Find My Status shows no photo`);
+console.log('PASS  photoUrl survives the whitelist');
 
 // 4. capped at 15 even though 30 match
 const r2 = await call('cruz');

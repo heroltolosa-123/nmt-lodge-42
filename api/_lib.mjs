@@ -3,10 +3,16 @@
 /* The only member fields that may ever reach an anonymous browser. This is
    the same whitelist the Apps Script patch applies, repeated here because
    this layer must not depend on that one being correct. */
+/* What a name search may return to anyone, signed in or not.
+   photoUrl is here on purpose: Find My Status shows the brother's portrait,
+   and the page is public, so the portrait is public too - the same as the
+   officers' photographs already on the Officers page. Everything omitted
+   here - address, contact number, email, date of birth, occupation - stays
+   omitted. */
 export const PUBLIC_FIELDS = [
   'fullName', 'yearRaised', 'status', 'proficiency', 'attendanceTotal',
   'qualifiedToVote', 'goodStanding', 'arrears', 'lml', 'months',
-  'attendanceRemarks'
+  'attendanceRemarks', 'photoUrl'
 ];
 
 export function publicView(m) {
