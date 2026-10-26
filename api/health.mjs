@@ -1,4 +1,5 @@
 import { ROLES, json, readSession } from './_lib.mjs';
+import { kvConfigured } from './_kv.mjs';
 
 /* ---------------------------------------------------------------------
    Configuration check.
@@ -46,6 +47,9 @@ export default async function handler(req, res) {
       set: !!process.env.SESSION_SECRET,
       lengthOk: (process.env.SESSION_SECRET || '').length >= 24
     },
+    // Whether officers can set their own passwords yet. Without it every
+    // chair falls back to its environment variable, which still works.
+    passwordStore: { set: kvConfigured() },
     chairs: {}
   };
   /* A hidden chair is reported only to someone already signed in. Listing it

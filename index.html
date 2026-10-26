@@ -1181,6 +1181,7 @@
   .lock-field select:focus, .lock-field input:focus{
     outline:none; border-color:var(--line-hi); box-shadow:0 0 0 3px rgba(217,180,100,.08);
   }
+  .signed-bar-actions{ display:flex; gap:8px; flex-wrap:wrap }
   .signed-bar{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     flex-wrap:wrap; margin:0 0 18px; padding:10px 14px;
@@ -3521,8 +3522,83 @@ function showSignedIn(label) {
     content.insertBefore(bar, content.firstChild);
   }
   bar.innerHTML = `<span>Signed in as <strong>${esc(label)}</strong></span>` +
-                  `<button class="btn btn-sm" type="button" id="sign-out-btn">Sign out</button>`;
+                  `<span class="signed-bar-actions">` +
+                  `<button class="btn btn-sm" type="button" id="change-pw-btn">Change my password</button>` +
+                  `<button class="btn btn-sm" type="button" id="sign-out-btn">Sign out</button>` +
+                  `</span>`;
   document.getElementById('sign-out-btn').addEventListener('click', signOut);
+  document.getElementById('change-pw-btn').addEventListener('click', togglePasswordForm);
+}
+
+/* ---------------------------------------------------------------------
+   CHANGE MY PASSWORD
+
+   The chair is never sent — the server takes it from the session cookie,
+   so this form cannot be pointed at somebody else's password. The current
+   password is asked for again because a session left open on a shared
+   machine should not be enough to take the chair for good.
+   --------------------------------------------------------------------- */
+function togglePasswordForm() {
+  const existing = document.getElementById('change-pw-card');
+  if (existing) { existing.remove(); return; }
+
+  const card = document.createElement('div');
+  card.id = 'change-pw-card';
+  card.className = 'card';
+  card.style.marginTop = '14px';
+  card.innerHTML = `
+    <h3 style="margin-top:0">Change my password</h3>
+    <p class="hint">This changes the password for your own chair only. You will stay signed in.</p>
+    <div class="grid-2" style="margin-top:12px">
+      <div><label class="hint">Current password</label>
+        <input type="password" id="pw-current" autocomplete="current-password"></div>
+      <div><label class="hint">New password (at least 10 characters)</label>
+        <input type="password" id="pw-new" autocomplete="new-password"></div>
+      <div><label class="hint">New password again</label>
+        <input type="password" id="pw-again" autocomplete="new-password"></div>
+    </div>
+    <div class="search-row" style="margin-top:14px">
+      <button class="btn" type="button" id="pw-save">Save new password</button>
+    </div>
+    <p class="hint" id="pw-msg" role="status" aria-live="polite"></p>`;
+  const bar = document.getElementById('signed-in-bar');
+  bar.parentNode.insertBefore(card, bar.nextSibling);
+  document.getElementById('pw-current').focus();
+
+  document.getElementById('pw-save').addEventListener('click', async () => {
+    const msg = document.getElementById('pw-msg');
+    const current = document.getElementById('pw-current').value;
+    const next    = document.getElementById('pw-new').value;
+    const again   = document.getElementById('pw-again').value;
+
+    if (next !== again) { msg.textContent = 'The two new passwords do not match.'; return; }
+    if (next.length < 10) { msg.textContent = 'Use at least 10 characters.'; return; }
+
+    msg.innerHTML = '<span class="spinner"></span>Saving…';
+    try {
+      const res = await fetch('/api/password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ currentPassword: current, newPassword: next })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        card.remove();
+        toast('Password changed. Use the new one next time you sign in.', 'ok');
+        return;
+      }
+      msg.textContent = {
+        current_password_wrong: 'That is not your current password.',
+        too_short: 'Use at least 10 characters.',
+        unchanged: 'The new password is the same as the old one.',
+        edge_whitespace: 'Remove the spaces at the start or end.',
+        not_signed_in: 'Your session has expired. Sign in again.',
+        no_password_store: 'Passwords cannot be changed here yet — the password store is not set up.'
+      }[data.error] || (data.detail || data.error || ('Server returned ' + res.status));
+    } catch (err) {
+      msg.textContent = err.message;
+    }
+  });
 }
 
 async function signOut() {

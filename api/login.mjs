@@ -1,5 +1,5 @@
 import { ROLES, requireEnv, verifyPassword, signToken, newSession,
-         sessionCookie, readBody, json } from './_lib.mjs';
+         sessionCookie, readBody, json, resolvePassword } from './_lib.mjs';
 
 /* A shared instance counter. Vercel may run several, so this slows an
    attacker down rather than stopping one — the real protection is that
@@ -33,11 +33,13 @@ export default async function handler(req, res) {
 
   const role = String(body.role || '').toLowerCase();
   const spec = ROLES[role];
-  const stored = spec && process.env[spec.env];
+  // A password the officer set themselves wins; the environment variable is
+  // the fallback, so a chair works before the store exists and after.
+  const { hash } = spec ? await resolvePassword(role) : { hash: null };
 
   // One message and one shape for every failure, so the response cannot
   // be used to learn which chairs have passwords set.
-  if (!spec || !stored || !verifyPassword(body.password || '', stored)) {
+  if (!spec || !hash || !verifyPassword(body.password || '', hash)) {
     return json(res, 401, { error: 'invalid_credentials' });
   }
 

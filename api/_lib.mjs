@@ -51,6 +51,7 @@ export function json(res, status, body, cacheControl) {
    officer also used on their email.
    ===================================================================== */
 import crypto from 'node:crypto';
+import { kvGet } from './_kv.mjs';
 
 export const ROLES = {
   wm:        { label: 'Worshipful Master', env: 'PW_WM' },
@@ -74,6 +75,28 @@ export const VISIBLE_ROLES = Object.fromEntries(
 
 const SESSION_COOKIE = 'nmt_session';
 const SESSION_HOURS  = 8;
+
+/* Where a chair's password actually comes from.
+
+   A password the officer set themselves lives in the store and wins. The
+   environment variable stays as the fallback, so every chair keeps working
+   before the store exists and still works if it is ever removed — and it is
+   the way back in if an officer forgets what they set: clear the stored one
+   and the variable applies again. */
+export const kvPasswordKey = role => 'nmt:pw:' + role;
+
+export async function resolvePassword(role) {
+  const spec = ROLES[role];
+  if (!spec) return { hash: null, source: null };
+  try {
+    const stored = await kvGet(kvPasswordKey(role));
+    if (stored) return { hash: String(stored), source: 'set by the officer' };
+  } catch {
+    // The store being unreachable must not lock the Lodge out.
+  }
+  const env = process.env[spec.env];
+  return env ? { hash: env, source: 'environment variable' } : { hash: null, source: null };
+}
 
 export function hashPassword(plain) {
   const salt = crypto.randomBytes(16);
