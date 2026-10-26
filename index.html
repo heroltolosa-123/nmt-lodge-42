@@ -3668,25 +3668,78 @@ function togglePasswordForm() {
   if (currentRole === 'admin') {
     document.getElementById('pw-admin').innerHTML = `
       <hr style="margin:20px 0;border:none;border-top:1px solid var(--line-mid)">
-      <h3 style="margin:0 0 6px">Give a chair its opening password</h3>
-      <p class="hint">Hand it to the officer in person. They can change it once signed in.</p>
+      <h3 style="margin:0 0 6px">Invite an officer</h3>
+      <p class="hint">Sends a one-time link. The officer chooses their own password &mdash;
+         you never see it. The link works once and expires after seven days.</p>
       <div class="grid-2" style="margin-top:12px">
         <div><label class="hint">Chair</label><select id="pw-chair"></select></div>
-        <div><label class="hint">Opening password (at least 10 characters)</label>
-          <input type="text" id="pw-for-chair" autocomplete="off"></div>
+        <div><label class="hint">Email (optional &mdash; leave blank to copy the link yourself)</label>
+          <input type="email" id="pw-email" autocomplete="off" placeholder="brother@example.com"></div>
       </div>
       <div class="search-row" style="margin-top:14px">
-        <button class="btn" type="button" id="pw-set-chair">Set this chair's password</button>
+        <button class="btn" type="button" id="pw-invite">Create the link</button>
       </div>
-      <p class="hint" id="pw-chair-msg" role="status" aria-live="polite"></p>`;
+      <p class="hint" id="pw-chair-msg" role="status" aria-live="polite"></p>
+      <div id="pw-link-box"></div>
 
-    const sel = document.getElementById('pw-chair');
-    sel.innerHTML = [...document.querySelectorAll('#admin-role option')]
+      <details style="margin-top:18px">
+        <summary class="hint" style="cursor:pointer">Or set a password for them yourself</summary>
+        <p class="hint" style="margin-top:8px">Only if the officer cannot use a link.
+           You will know their password until they change it.</p>
+        <div class="grid-2" style="margin-top:10px">
+          <div><label class="hint">Chair</label><select id="pw-chair2"></select></div>
+          <div><label class="hint">Opening password (at least 10 characters)</label>
+            <input type="text" id="pw-for-chair" autocomplete="off"></div>
+        </div>
+        <div class="search-row" style="margin-top:12px">
+          <button class="btn btn-sm" type="button" id="pw-set-chair">Set it</button>
+        </div>
+      </details>`;
+
+    const chairOptions = [...document.querySelectorAll('#admin-role option')]
       .map(o => `<option value="${o.value}">${esc(o.textContent)}</option>`).join('');
+    const sel = document.getElementById('pw-chair');
+    sel.innerHTML = chairOptions;
+    document.getElementById('pw-chair2').innerHTML = chairOptions;
+
+    document.getElementById('pw-invite').addEventListener('click', async () => {
+      const m = document.getElementById('pw-chair-msg');
+      const box = document.getElementById('pw-link-box');
+      box.innerHTML = '';
+      m.innerHTML = '<span class="spinner"></span>Creating…';
+      try {
+        const res = await fetch('/api/invite', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ chair: sel.value, email: document.getElementById('pw-email').value.trim() })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          m.textContent = data.error === 'no_password_store'
+            ? 'The password store is not set up yet.'
+            : (data.error || ('Server returned ' + res.status));
+          return;
+        }
+        m.textContent = data.emailed && data.emailed.sent
+          ? 'Emailed to ' + data.emailed.to + '. It expires in seven days.'
+          : 'Link ready for ' + data.label + '. Send it however you like — it expires in seven days.';
+        box.innerHTML = `<input type="text" readonly value="${esc(data.link)}"
+             style="width:100%;margin-top:10px;font-size:13px" onclick="this.select()">
+          <button class="btn btn-sm" type="button" id="pw-copy" style="margin-top:8px">Copy link</button>`;
+        document.getElementById('pw-copy').addEventListener('click', () => {
+          navigator.clipboard.writeText(data.link).then(
+            () => toast('Link copied.', 'ok'),
+            () => toast('Select the link and copy it.', 'bad'));
+        });
+        if (data.emailed && !data.emailed.sent && document.getElementById('pw-email').value.trim()) {
+          m.textContent += ' (Email not sent: ' + data.emailed.reason + ')';
+        }
+      } catch (err) { m.textContent = err.message; }
+    });
 
     document.getElementById('pw-set-chair').addEventListener('click', async () => {
       const m = document.getElementById('pw-chair-msg');
-      const chair = sel.value;
+      const chair = document.getElementById('pw-chair2').value;
       const given = document.getElementById('pw-for-chair').value;
       if (given.length < 10) { m.textContent = 'Use at least 10 characters.'; return; }
       m.innerHTML = '<span class="spinner"></span>Saving…';
@@ -3764,6 +3817,90 @@ async function signOut() {
    chair, and /api/login answers an unknown chair exactly as it answers a
    wrong password, so the name cannot be found by probing either.
    --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   AN INVITATION TO SET A PASSWORD
+
+   The officer opens a link and chooses their own password. The link
+   carries no password and names nobody — the chair it belongs to is held
+   on the server against the token. It works once and expires on its own.
+   --------------------------------------------------------------------- */
+(async function redeemInviteIfPresent() {
+  const m = location.hash.match(/^#invite=([A-Za-z0-9_-]+)$/);
+  if (!m) return;
+  const token = m[1];
+  history.replaceState(null, '', location.pathname);   // keep it out of the history
+
+  let chair;
+  try {
+    const res = await fetch('/api/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    chair = await res.json();
+    if (!res.ok) {
+      toast(chair.error === 'link_expired'
+        ? 'That link has already been used, or it has expired. Ask for a new one.'
+        : 'That link cannot be used.', 'bad');
+      return;
+    }
+  } catch { toast('Could not reach the Lodge server.', 'bad'); return; }
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.cssText = 'max-width:520px;margin:28px auto';
+  card.innerHTML = `
+    <h2 style="margin-top:0">Choose your password</h2>
+    <p class="hint">You are setting the password for <strong>${esc(chair.label)}</strong>.
+       Nobody else will know it, including the Lodge Administrator.</p>
+    <div style="margin-top:14px">
+      <label class="hint">New password (at least 10 characters)</label>
+      <input type="password" id="inv-new" autocomplete="new-password" style="width:100%">
+    </div>
+    <div style="margin-top:12px">
+      <label class="hint">Type it again</label>
+      <input type="password" id="inv-again" autocomplete="new-password" style="width:100%">
+    </div>
+    <div class="search-row" style="margin-top:16px">
+      <button class="btn" type="button" id="inv-save">Set my password</button>
+    </div>
+    <p class="hint" id="inv-msg" role="status" aria-live="polite"></p>`;
+
+  const lock = document.getElementById('admin-lock');
+  lock.parentNode.insertBefore(card, lock);
+  document.querySelector('.main-tab[data-panel="admin"]')?.click();
+  card.scrollIntoView({ block: 'center' });
+  document.getElementById('inv-new').focus();
+
+  document.getElementById('inv-save').addEventListener('click', async () => {
+    const msg = document.getElementById('inv-msg');
+    const a = document.getElementById('inv-new').value;
+    const b = document.getElementById('inv-again').value;
+    if (a !== b) { msg.textContent = 'The two do not match.'; return; }
+    if (a.length < 10) { msg.textContent = 'Use at least 10 characters.'; return; }
+    msg.innerHTML = '<span class="spinner"></span>Saving…';
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword: a })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        card.remove();
+        toast('Password set. Sign in as ' + data.label + '.', 'ok');
+        const sel = document.getElementById('admin-role');
+        if (sel) sel.value = data.chair;
+        document.getElementById('admin-pass')?.focus();
+        return;
+      }
+      msg.textContent = {
+        link_expired: 'That link has already been used. Ask for a new one.',
+        too_short: 'Use at least 10 characters.',
+        edge_whitespace: 'Remove the spaces at the start or end.'
+      }[data.error] || (data.error || ('Server returned ' + res.status));
+    } catch (err) { msg.textContent = err.message; }
+  });
+})();
+
 (function revealAdminChair() {
   if (location.hash.replace(/^#/, '').toLowerCase() !== 'admin') return;
   const sel = document.getElementById('admin-role');

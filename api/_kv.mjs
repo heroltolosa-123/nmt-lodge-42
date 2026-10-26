@@ -39,9 +39,15 @@ export async function kvGet(key) {
 }
 
 /* The value goes in the body, not the path: a scrypt hash is 168
-   characters and would otherwise have to survive URL encoding. */
-export async function kvSet(key, value) {
-  return call('/set/' + encodeURIComponent(key), { method: 'POST', body: String(value) });
+   characters and would otherwise have to survive URL encoding.
+
+   `ttlSeconds` lets a value expire by itself, which is what makes an
+   invitation safe to email: it stops working on its own whether or not
+   anybody remembers to withdraw it. */
+export async function kvSet(key, value, ttlSeconds) {
+  const path = '/set/' + encodeURIComponent(key) +
+               (ttlSeconds ? '?EX=' + Math.floor(ttlSeconds) : '');
+  return call(path, { method: 'POST', body: String(value) });
 }
 
 export async function kvDel(key) {
