@@ -2078,9 +2078,18 @@ function jsonp(params) {
       .then(data => {
         inflight.delete(key);
         if (data && !data.error) {
+          const before = readCache.get(key);
           const entry = { t: Date.now(), data };
           readCache.set(key, entry);
           writeStored(key, entry);
+          /* The caller has already been handed the stale copy, so a change
+             made anywhere other than this page — the Secretary in Google
+             Sheets, a script, another officer's browser — would otherwise
+             stay invisible until the cache aged out. Announce it and let
+             whoever drew the panel draw it again. */
+          if (!before || JSON.stringify(before.data) !== JSON.stringify(data)) {
+            document.dispatchEvent(new CustomEvent('nmt:fresh', { detail: { key, data } }));
+          }
         }
         return data;   // an error reply is passed through, never cached
       })
@@ -2609,6 +2618,27 @@ function renderDetail(m) {
   kindle();
   countUpAll();
 }
+
+/* ---------------------------------------------------------------------
+   REDRAW WHEN THE CACHE CATCHES UP
+
+   Reads are cached so the page is quick. The cost is that a change made
+   somewhere other than this page — the Secretary in Google Sheets, a
+   script, another officer's browser — arrives a moment after the panel
+   has already been drawn from the older copy.
+
+   jsonp() announces it when that happens. Each panel that is on screen
+   draws itself again; one that is not simply picks it up when opened.
+   --------------------------------------------------------------------- */
+document.addEventListener('nmt:fresh', e => {
+  const redraw = {
+    officers:   [loadPublicOfficers, loadOfficersAdmin],
+    activities: [loadPublicGallery, loadActivitiesAdmin],
+    bulletin:   [loadPublicBulletin, loadBulletinAdmin],
+    birthdays:  [loadCelebrants]
+  }[e.detail.key] || [];
+  redraw.forEach(fn => { try { fn(); } catch (err) { /* a panel never drawn */ } });
+});
 
 document.getElementById('lookup-btn').addEventListener('click', runLookup);
 document.getElementById('lookup-input').addEventListener('keydown', e => { if (e.key === 'Enter') runLookup(); });
