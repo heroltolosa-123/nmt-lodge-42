@@ -1565,8 +1565,27 @@
       <!-- REPORTS -->
       <div class="card admin-sub" id="sub-reports" style="display:none">
         <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15h6"/></svg>Reports</h2>
-        <p class="hint">Downloads a CSV of the roster as currently loaded. Opens in Excel, Numbers or Sheets.</p>
+        <p class="hint">Takes a copy of the roster as currently loaded. The Excel workbook holds every report on its own sheet; the CSV files hold one report each.</p>
+
+        <div class="report-row" style="align-items:flex-end">
+          <div>
+            <label class="hint" for="rep-from" style="display:block;margin-bottom:6px">Attendance from</label>
+            <input type="month" id="rep-from" aria-describedby="rep-range-note">
+          </div>
+          <div>
+            <label class="hint" for="rep-to" style="display:block;margin-bottom:6px">to</label>
+            <input type="month" id="rep-to" aria-describedby="rep-range-note">
+          </div>
+          <button class="btn btn-sm" type="button" id="rep-term">This lodge year</button>
+          <button class="btn btn-sm" type="button" id="rep-clear">All months</button>
+        </div>
+        <p class="hint" id="rep-range-note" role="status" aria-live="polite" style="margin-top:10px">&nbsp;</p>
+
         <div class="report-row">
+          <button class="btn" type="button" id="rep-xlsx">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+            Excel workbook
+          </button>
           <button class="btn" type="button" id="rep-roster">
             <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
             Full roster
@@ -3696,38 +3715,309 @@ function stamp() {
          String(d.getDate()).padStart(2, '0');
 }
 
+  /* ---------------------------------------------------------------------
+     XLSX — a real Excel workbook, written by hand.
+
+     An .xlsx is a zip of XML parts. Writing one here keeps the page a
+     single file with no library: a 900KB spreadsheet dependency to produce
+     a few hundred rows would cost every visitor who never opens the
+     dashboard. Entries are stored, not deflated — these sheets are small,
+     and "store" needs no compressor.
+
+     Text goes in as an inline string, so nothing a member is called can be
+     read back as a formula. The CSV export has to guard against that by
+     prefixing an apostrophe; here the format rules it out.
+     --------------------------------------------------------------------- */
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[i] = c >>> 0;
+    }
+    return t;
+  })();
+
+  function crc32(bytes) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function xmlEscape(s) {
+    return String(s)
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  }
+
+  function colName(n) {               // 1 -> A, 27 -> AA
+    let s = '';
+    while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = (n - r - 1) / 26; }
+    return s;
+  }
+
+  /* Excel rejects a workbook whose sheet name carries any of : \ / ? * [ ]
+     or runs past 31 characters, and refuses duplicates outright. */
+  function safeSheetName(name, taken) {
+    let s = String(name || 'Sheet').replace(/[\\\/\?\*\[\]:]/g, ' ').trim().slice(0, 31) || 'Sheet';
+    let n = 1, base = s;
+    while (taken.has(s.toLowerCase())) { const suf = ' (' + (++n) + ')'; s = base.slice(0, 31 - suf.length) + suf; }
+    taken.add(s.toLowerCase());
+    return s;
+  }
+
+  function sheetXml(header, rows) {
+    const out = [];
+    const line = (r, cells) => `<row r="${r}">${cells}</row>`;
+    const cell = (c, r, v, bold) => {
+      const ref = colName(c) + r;
+      if (v === null || v === undefined || v === '') return `<c r="${ref}"${bold ? ' s="1"' : ''}/>`;
+      if (typeof v === 'number' && isFinite(v)) return `<c r="${ref}"${bold ? ' s="1"' : ''}><v>${v}</v></c>`;
+      return `<c r="${ref}" t="inlineStr"${bold ? ' s="1"' : ''}><is><t xml:space="preserve">${xmlEscape(v)}</t></is></c>`;
+    };
+    out.push(line(1, header.map((h, i) => cell(i + 1, 1, h, true)).join('')));
+    rows.forEach((row, ri) => {
+      out.push(line(ri + 2, row.map((v, i) => cell(i + 1, ri + 2, v, false)).join('')));
+    });
+    const cols = header.length
+      ? `<cols>${header.map((h, i) => `<col min="${i+1}" max="${i+1}" width="${Math.min(42, Math.max(11, String(h).length + 4))}" customWidth="1"/>`).join('')}</cols>`
+      : '';
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
+      + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`
+      + cols
+      + `<sheetData>${out.join('')}</sheetData></worksheet>`;
+  }
+
+  function buildXlsx(sheets) {
+    const taken = new Set();
+    const named = sheets.map(s => ({ ...s, name: safeSheetName(s.name, taken) }));
+    const files = [];
+    const add = (path, text) => files.push({ path, data: new TextEncoder().encode(text) });
+
+    add('[Content_Types].xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
+      + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">`
+      + `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>`
+      + `<Default Extension="xml" ContentType="application/xml"/>`
+      + `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>`
+      + `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`
+      + named.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+      + `</Types>`);
+
+    add('_rels/.rels',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
+      + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`
+      + `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>`
+      + `</Relationships>`);
+
+    add('xl/workbook.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
+      + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" `
+      + `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>`
+      + named.map((s, i) => `<sheet name="${xmlEscape(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')
+      + `</sheets></workbook>`);
+
+    add('xl/_rels/workbook.xml.rels',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
+      + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`
+      + named.map((_, i) => `<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')
+      + `<Relationship Id="rId${named.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`
+      + `</Relationships>`);
+
+    // Two formats only: normal, and bold for the header row.
+    add('xl/styles.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
+      + `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`
+      + `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font>`
+      + `<font><b/><sz val="11"/><name val="Calibri"/></font></fonts>`
+      + `<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>`
+      + `<borders count="1"><border/></borders>`
+      + `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>`
+      + `<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>`
+      + `<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>`
+      + `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>`
+      + `</styleSheet>`);
+
+    named.forEach((s, i) => add(`xl/worksheets/sheet${i+1}.xml`, sheetXml(s.header || [], s.rows || [])));
+    return zip(files);
+  }
+
+  function zip(files) {
+    const chunks = [], central = [];
+    let offset = 0;
+    const u16 = n => [n & 0xFF, (n >>> 8) & 0xFF];
+    const u32 = n => [n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF];
+
+    for (const f of files) {
+      const name = new TextEncoder().encode(f.path);
+      const crc = crc32(f.data);
+      const local = [].concat(
+        u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+        u32(crc), u32(f.data.length), u32(f.data.length), u16(name.length), u16(0));
+      chunks.push(new Uint8Array(local), name, f.data);
+      central.push({ name, crc, size: f.data.length, offset });
+      offset += local.length + name.length + f.data.length;
+    }
+
+    const dir = [];
+    for (const c of central) {
+      const head = [].concat(
+        u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+        u32(c.crc), u32(c.size), u32(c.size),
+        u16(c.name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(c.offset));
+      dir.push(new Uint8Array(head), c.name);
+    }
+    const dirBytes = dir.reduce((n, a) => n + a.length, 0);
+    const end = new Uint8Array([].concat(
+      u32(0x06054b50), u16(0), u16(0), u16(central.length), u16(central.length),
+      u32(dirBytes), u32(offset), u16(0)));
+
+    const all = [...chunks, ...dir, end];
+    const total = all.reduce((n, a) => n + a.length, 0);
+    const out = new Uint8Array(total);
+    let p = 0;
+    for (const a of all) { out.set(a, p); p += a.length; }
+    return out;
+  }
+
+
+function downloadXlsx(filename, sheets) {
+  const total = sheets.reduce((n, s) => n + (s.rows ? s.rows.length : 0), 0);
+  if (!total) { toast('Nothing to export yet.', 'bad'); return; }
+  const blob = new Blob([buildXlsx(sheets)],
+    { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(total + ' row' + (total === 1 ? '' : 's') + ' across ' + sheets.length + ' sheets.', 'ok');
+}
+
+/* ---------------------------------------------------------------------
+   ATTENDANCE DATE FILTER
+
+   A recorded month arrives as the label "Mar 2026", which sorts
+   alphabetically into nonsense. Turning it into "2026-03" makes it both
+   comparable and the same shape as <input type="month">, so the range
+   test is a pair of string comparisons and nothing has to parse a date.
+   --------------------------------------------------------------------- */
+function monthKey(label) {
+  const m = String(label || '').trim().match(/^([A-Za-z]{3})[a-z]*\s+(\d{4})$/);
+  if (!m) return null;
+  const idx = MONTH_INDEX[m[1].toLowerCase()];
+  if (idx === undefined) return null;
+  return m[2] + '-' + String(idx + 1).padStart(2, '0');
+}
+
+function currentTermRange() {
+  const now = new Date();
+  const start = now.getMonth() >= 2 ? now.getFullYear() : now.getFullYear() - 1;
+  return { from: start + '-03', to: (start + 1) + '-02' };
+}
+
 (function wireReports() {
   const roster = document.getElementById('rep-roster');
   if (!roster) return;
+  const fromEl = document.getElementById('rep-from');
+  const toEl   = document.getElementById('rep-to');
+  const note   = document.getElementById('rep-range-note');
 
-  roster.addEventListener('click', () => downloadCsv(
-    'nmt42-roster-' + stamp() + '.csv',
-    ['Member ID', 'Full name', 'Year raised', 'Status', 'Proficiency',
-     'Good standing', 'Qualified to vote', 'Arrears', 'Attendance total', 'LML'],
-    fullRoster.map(m => [m.memberId, m.fullName, m.yearRaised, m.status, m.proficiency,
-      m.goodStanding, m.qualifiedToVote, m.arrears, m.attendanceTotal, m.lml])
-  ));
+  function range() {
+    let from = fromEl.value || '';
+    let to   = toEl.value || '';
+    // A range entered back to front is a slip, not a request for nothing.
+    if (from && to && from > to) { const t = from; from = to; to = t; }
+    return { from, to };
+  }
 
-  // One row per member per recorded month, so the sheet can be pivoted.
-  document.getElementById('rep-attendance').addEventListener('click', () => {
+  function attendanceRows() {
+    const { from, to } = range();
     const rows = [];
     fullRoster.forEach(m => {
       (m.months || []).forEach(mo => {
-        rows.push([m.memberId, m.fullName, mo.month || mo.label || '', mo.code || '']);
+        const label = mo.month || mo.label || '';
+        const code = mo.value || mo.code || '';
+        if (!code) return;
+        const key = monthKey(label);
+        if (from && (!key || key < from)) return;
+        if (to && (!key || key > to)) return;
+        rows.push([m.memberId, m.fullName, label, key || '', code]);
       });
     });
-    downloadCsv('nmt42-attendance-' + stamp() + '.csv',
-      ['Member ID', 'Full name', 'Month', 'Code'], rows);
+    // Oldest first within a member, members alphabetical — how the Secretary reads it.
+    rows.sort((a, b) => String(a[1]).localeCompare(String(b[1])) || String(a[3]).localeCompare(String(b[3])));
+    return rows;
+  }
+
+  function describe() {
+    const { from, to } = range();
+    const n = attendanceRows().length;
+    const span = !from && !to ? 'every recorded month'
+      : from && to ? from + ' to ' + to
+      : from ? 'from ' + from + ' onward'
+      : 'up to ' + to;
+    note.textContent = n + ' attendance record' + (n === 1 ? '' : 's') + ' — ' + span + '.';
+  }
+
+  fromEl.addEventListener('change', describe);
+  toEl.addEventListener('change', describe);
+  document.getElementById('rep-clear').addEventListener('click', () => {
+    fromEl.value = ''; toEl.value = ''; describe();
+  });
+  document.getElementById('rep-term').addEventListener('click', () => {
+    const t = currentTermRange();
+    fromEl.value = t.from; toEl.value = t.to; describe();
   });
 
-  document.getElementById('rep-arrears').addEventListener('click', () => {
-    const owing = fullRoster
-      .filter(m => (Number(m.arrears) || 0) > 0)
-      .sort((a, b) => (Number(b.arrears) || 0) - (Number(a.arrears) || 0));
-    downloadCsv('nmt42-arrears-' + stamp() + '.csv',
-      ['Member ID', 'Full name', 'Status', 'Arrears', 'Good standing'],
-      owing.map(m => [m.memberId, m.fullName, m.status, m.arrears, m.goodStanding]));
+  const ATT_HEADER = ['Member ID', 'Full name', 'Month', 'Sortable month', 'Code'];
+  const ROSTER_HEADER = ['Member ID', 'Full name', 'Year raised', 'Status', 'Proficiency',
+    'Good standing', 'Qualified to vote', 'Arrears', 'Attendance this term', 'LML'];
+  const ARREARS_HEADER = ['Member ID', 'Full name', 'Status', 'Arrears', 'Good standing'];
+
+  const rosterRows = () => fullRoster.map(m => [m.memberId, m.fullName, m.yearRaised, m.status,
+    m.proficiency, m.goodStanding, m.qualifiedToVote, Number(m.arrears) || 0, m.attendanceTotal, m.lml]);
+
+  const arrearsRows = () => fullRoster
+    .filter(m => (Number(m.arrears) || 0) > 0)
+    .sort((a, b) => (Number(b.arrears) || 0) - (Number(a.arrears) || 0))
+    .map(m => [m.memberId, m.fullName, m.status, Number(m.arrears) || 0, m.goodStanding]);
+
+  roster.addEventListener('click', () => downloadCsv(
+    'nmt42-roster-' + stamp() + '.csv', ROSTER_HEADER, rosterRows()));
+
+  document.getElementById('rep-attendance').addEventListener('click', () => {
+    const { from, to } = range();
+    const suffix = from || to ? '-' + (from || 'start') + '_to_' + (to || 'latest') : '';
+    downloadCsv('nmt42-attendance' + suffix + '-' + stamp() + '.csv', ATT_HEADER, attendanceRows());
   });
+
+  document.getElementById('rep-arrears').addEventListener('click', () => downloadCsv(
+    'nmt42-arrears-' + stamp() + '.csv', ARREARS_HEADER, arrearsRows()));
+
+  document.getElementById('rep-xlsx').addEventListener('click', () => {
+    const { from, to } = range();
+    const span = !from && !to ? 'all months' : (from || 'start') + ' to ' + (to || 'latest');
+    downloadXlsx('nmt42-lodge-records-' + stamp() + '.xlsx', [
+      { name: 'Roster', header: ROSTER_HEADER, rows: rosterRows() },
+      { name: 'Attendance', header: ATT_HEADER, rows: attendanceRows() },
+      { name: 'Arrears', header: ARREARS_HEADER, rows: arrearsRows() },
+      { name: 'About', header: ['Field', 'Value'], rows: [
+        ['Lodge', 'Noli Me Tangere Lodge No. 42, F. & A. M.'],
+        ['Exported', new Date().toLocaleString()],
+        ['Attendance range', span],
+        ['Members', fullRoster.length],
+        ['Attendance records', attendanceRows().length],
+        ['Note', 'Contains member names and standing. Treat it as the Lodge book.']
+      ] }
+    ]);
+  });
+
+  describe();
 })();
 
 /* ---------------------------------------------------------------------
