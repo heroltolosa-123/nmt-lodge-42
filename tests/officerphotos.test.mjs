@@ -9,9 +9,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert';
+import { appsScriptDir, appsScriptSource } from './_appsscript.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const SRC = join(HERE, '..', '..', 'Noli Me Tangere System', 'appscript', 'apps-script.js');
+const SRC = appsScriptDir() + '/apps-script.js';
 const src = readFileSync(SRC, 'utf8');
 
 let MEMBERS = [];

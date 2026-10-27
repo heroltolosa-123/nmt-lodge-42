@@ -3,8 +3,9 @@
 // who is in good standing and who may vote.
 import assert from 'node:assert';
 import fs from 'node:fs';
+import { appsScriptDir, appsScriptSource } from './_appsscript.mjs';
 
-const SRC = '/Users/bogart/Downloads/Noli Me Tangere System/appscript/apps-script.js';
+const SRC = appsScriptDir() + '/apps-script.js';
 const src = fs.readFileSync(SRC, 'utf8');
 
 function grab(name) {

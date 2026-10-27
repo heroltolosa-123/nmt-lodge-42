@@ -6,9 +6,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert';
+import { appsScriptDir, appsScriptSource } from './_appsscript.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(join(HERE, '..', '..', 'Noli Me Tangere System', 'appscript', 'apps-script.js'), 'utf8');
+const src = appsScriptSource();
 
 // Members: A id ... L arrears(12).  Dues: A id, B memberId ... H raw(8)
 const members = [['MemberID'], ['M001', 'Abad', 'Mel Deo', '', 'Mel Deo Abad', 2010, 'Regular', '', 6, 'Y', 'Y', 12400]];

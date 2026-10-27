@@ -968,6 +968,20 @@
      courtesy — /api/password refuses the listing to every other chair. */
   .admins-only{ display:none }
   #admin-content.is-admin .admins-only{ display:inline-block }
+  /* The grid is wide; the name has to stay on screen or the row loses
+     its meaning three months in. */
+  #att-table th, #att-table td{ padding:7px 9px; white-space:nowrap }
+  #att-table th:first-child, #att-table td:first-child{
+    position:sticky; left:0; z-index:2; background:var(--ink-700); min-width:190px }
+  #att-table thead th{ position:sticky; top:0; z-index:3; background:var(--ink-700) }
+  #att-table thead th:first-child{ z-index:4 }
+  #att-table select{ padding:4px 6px; font-size:12.5px; min-width:62px }
+  #att-table input.att-arrears{ width:92px; padding:5px 7px; font-size:12.5px; text-align:right }
+  #att-table td.att-total{ text-align:center; font-weight:700 }
+  #att-table tr.att-short td.att-total{ color:var(--warn) }
+  #att-table tr.att-ok    td.att-total{ color:var(--ok) }
+  #att-table .att-changed{ outline:2px solid var(--warn); outline-offset:1px; border-radius:6px }
+  #att-table tr.inactive td:first-child{ opacity:.6 }
   .roster-name{ display:flex; align-items:center; gap:10px }
   .roster-name .avatar-sm, .roster-name .avatar-fallback{ flex:none }
   .photo-req{ display:flex; gap:16px; align-items:center; flex-wrap:wrap;
@@ -1620,6 +1634,9 @@
         <button class="ribbon-btn admin-subtab editors-only" role="tab" aria-selected="false" data-sub="rollcall">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>Roll Call</span>
         </button>
+        <button class="ribbon-btn admin-subtab editors-only" role="tab" aria-selected="false" data-sub="attendance">
+          <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>Attendance</span>
+        </button>
         <button class="ribbon-btn admin-subtab editors-only" role="tab" aria-selected="false" data-sub="dues">
           <span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/></svg>Log Dues</span>
         </button>
@@ -1648,6 +1665,47 @@
 
       <!-- ROSTER -->
       <!-- REPORTS -->
+      <!-- ATTENDANCE — a whole lodge year at once -->
+      <div class="card admin-sub" id="sub-attendance" style="display:none">
+        <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>Attendance &amp; Arrears</h2>
+        <p class="hint">A whole lodge year on one page, March to February. Change any cell and the
+           figure beside it moves with it. <strong>C</strong>, <strong>NO</strong> and
+           <strong>NC</strong> count toward the six needed to vote; <strong>NP</strong> and a blank
+           do not. Nothing is sent until you press Save.</p>
+
+        <div class="rollcall-tools" style="margin-top:14px">
+          <label class="rc-field">
+            <span>Lodge year</span>
+            <select id="att-term"></select>
+          </label>
+          <label class="rc-field rc-grow">
+            <span>Find a brother</span>
+            <input type="search" id="att-filter" placeholder="Type part of a name" autocomplete="off">
+          </label>
+          <label class="rc-field">
+            <span>Show</span>
+            <select id="att-scope">
+              <option value="active">Active brethren</option>
+              <option value="all">Everyone</option>
+              <option value="short">Short of six</option>
+              <option value="owing">Owing money</option>
+            </select>
+          </label>
+          <span class="rc-count" id="att-count"></span>
+        </div>
+
+        <div class="search-row" style="margin-top:12px">
+          <button class="btn" type="button" id="att-save">Save changes</button>
+          <button class="btn btn-sm" type="button" id="att-revert">Undo my edits</button>
+          <span class="hint" id="att-dirty" style="margin-left:4px"></span>
+        </div>
+        <p class="hint" id="att-msg" role="status" aria-live="polite"></p>
+
+        <div class="table-wrap" style="margin-top:12px;max-height:70vh">
+          <table id="att-table"><thead></thead><tbody></tbody></table>
+        </div>
+      </div>
+
       <!-- MEMBER PHOTOGRAPHS -->
       <div class="card admin-sub" id="sub-photos" style="display:none">
         <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/></svg>Member Photographs</h2>
@@ -4536,6 +4594,259 @@ function currentTermRange() {
 })();
 
 /* ---------------------------------------------------------------------
+   ATTENDANCE & ARREARS — a whole lodge year, editable
+
+   Roll Call does one month for everyone. This does one year for
+   everyone, which is the view you need to answer "is this right?" rather
+   than "what happened on Tuesday".
+
+   Everything is drawn from fullRoster, which already carries each
+   brother's months. No new call to the sheet, and the running total
+   beside each name is worked out the same way the sheet's own formula
+   does it — C, NO and NC count, NP and a blank do not — so the two
+   cannot drift.
+
+   Edits are held here until Save. They go out grouped by month, one
+   roll-call write per month touched, because that is the shape the
+   script takes. An emptied cell is sent as an empty code, which the
+   script reads as "take this mark off".
+   --------------------------------------------------------------------- */
+const ATT_COUNTED = new Set(['C', 'NO', 'NC']);
+const ATT_MONTH_NAMES = ['Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb'];
+let attTermStart = null;
+let attEdits = new Map();        // "memberId|YYYY-MM" -> code
+let attArrearsEdits = new Map(); // memberId -> number
+
+/* The twelve months of a lodge year, March first, as YYYY-MM. */
+function attTermMonths(start) {
+  const out = [];
+  for (let i = 0; i < 12; i++) {
+    const m = 3 + i;
+    const year = m <= 12 ? start : start + 1;
+    const mm = m <= 12 ? m : m - 12;
+    out.push({ key: year + '-' + String(mm).padStart(2, '0'), label: ATT_MONTH_NAMES[i], year });
+  }
+  return out;
+}
+
+/* Every lodge year the roll knows about, newest first, and always the
+   current one even if nobody has attended yet. */
+function attKnownTerms() {
+  const years = new Set([currentLodgeYearStart()]);
+  fullRoster.forEach(m => (m.months || []).forEach(mo => {
+    const y = lodgeYearOf(mo.month);
+    if (y !== null) years.add(y);
+  }));
+  return [...years].sort((a, b) => b - a);
+}
+
+function currentLodgeYearStart() {
+  const now = new Date();
+  return now.getMonth() >= 2 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+/* What the sheet holds for this brother in this month, before any edit. */
+function attStored(member) {
+  const byKey = {};
+  (member.months || []).forEach(mo => {
+    const k = monthKey(mo.month);
+    if (k) byKey[k] = String(mo.value || '');
+  });
+  return byKey;
+}
+
+function attCurrentCode(member, stored, monthKeyStr) {
+  const edit = attEdits.get(member.memberId + '|' + monthKeyStr);
+  return edit !== undefined ? edit : (stored[monthKeyStr] || '');
+}
+
+function attArrearsOf(member) {
+  const edit = attArrearsEdits.get(member.memberId);
+  return edit !== undefined ? edit : (Number(member.arrears) || 0);
+}
+
+/* Negative arrears is money paid ahead, not a debt. Saying "-6,200" to
+   the Secretary invites him to correct it. */
+function attMoney(n) {
+  const v = Number(n) || 0;
+  if (v < 0) return '₱' + Math.abs(v).toLocaleString() + ' ahead';
+  return v ? '₱' + v.toLocaleString() : '₱0';
+}
+
+function attRows() {
+  const term = String(document.getElementById('att-filter').value || '').trim().toLowerCase();
+  const scope = document.getElementById('att-scope').value;
+  const months = attTermMonths(attTermStart);
+  return fullRoster
+    .filter(m => !term || String(m.fullName || '').toLowerCase().includes(term))
+    .filter(m => {
+      const active = !INACTIVE_RE.test(String(m.status || ''));
+      if (scope === 'active') return active;
+      if (scope === 'owing')  return attArrearsOf(m) > 0;
+      if (scope === 'short') {
+        const stored = attStored(m);
+        const n = months.filter(mo => ATT_COUNTED.has(attCurrentCode(m, stored, mo.key))).length;
+        return active && n < 6;
+      }
+      return true;
+    })
+    .sort((a, b) => String(a.fullName).localeCompare(String(b.fullName)));
+}
+
+const INACTIVE_RE = /suspend|expel|decease|dropped|demit/i;
+
+function renderAttendanceGrid() {
+  if (attTermStart === null) attTermStart = currentLodgeYearStart();
+  const months = attTermMonths(attTermStart);
+  const thead = document.querySelector('#att-table thead');
+  const tbody = document.querySelector('#att-table tbody');
+
+  thead.innerHTML = '<tr><th>Brother</th><th>Arrears</th>' +
+    months.map(mo => `<th title="${mo.label} ${mo.year}">${mo.label}<br><span class="hint" style="font-size:10px">${String(mo.year).slice(-2)}</span></th>`).join('') +
+    '<th>Of 6</th></tr>';
+
+  const rows = attRows();
+  tbody.innerHTML = rows.map(m => {
+    const stored = attStored(m);
+    const inactive = INACTIVE_RE.test(String(m.status || ''));
+    let counted = 0;
+    const cells = months.map(mo => {
+      const code = attCurrentCode(m, stored, mo.key);
+      if (ATT_COUNTED.has(code)) counted++;
+      const dirty = attEdits.has(m.memberId + '|' + mo.key) ? ' att-changed' : '';
+      return `<td><select class="att-cell${dirty}" data-member="${esc(m.memberId)}" data-month="${mo.key}">` +
+        ATTENDANCE_CODES.map(c =>
+          `<option value="${c}"${c === code ? ' selected' : ''}>${c || '—'}</option>`).join('') +
+        '</select></td>';
+    }).join('');
+    const arrears = attArrearsOf(m);
+    const aDirty = attArrearsEdits.has(m.memberId) ? ' att-changed' : '';
+    const cls = inactive ? 'inactive' : (counted >= 6 ? 'att-ok' : 'att-short');
+    return `<tr class="${cls}">` +
+      `<td><span class="roster-name">${avatarHtml(m, 'avatar-sm')}<span>${esc(m.fullName)}` +
+        (inactive ? ` <span class="hint">(${esc(m.status)})</span>` : '') + '</span></span></td>' +
+      `<td><input class="att-arrears${aDirty}" type="number" step="1" data-member="${esc(m.memberId)}"` +
+        ` value="${arrears}" title="${attMoney(arrears)}"></td>` +
+      cells +
+      `<td class="att-total">${counted}</td></tr>`;
+  }).join('') || '<tr><td colspan="15" class="hint">No brother matches.</td></tr>';
+
+  document.getElementById('att-count').textContent =
+    rows.length + (rows.length === 1 ? ' brother' : ' brethren');
+  attShowDirty();
+}
+
+/* The script takes a roll call — one month, many brethren — not a
+   scatter of single cells, so edits are gathered per month before they
+   go out. An emptied cell keeps its empty string: that is what tells the
+   script to take the mark off, and dropping it would silently turn a
+   correction into no change at all. */
+function attGroupByMonth(edits) {
+  const byMonth = new Map();
+  for (const [k, code] of edits) {
+    // The month is the fixed-shape half (YYYY-MM, never a bar), so the key
+    // splits at the LAST bar. A member id is the part that varies.
+    const bar = k.lastIndexOf('|');
+    const memberId = k.slice(0, bar);
+    const month = k.slice(bar + 1);
+    if (!byMonth.has(month)) byMonth.set(month, []);
+    byMonth.get(month).push({ memberId, code });
+  }
+  return byMonth;
+}
+
+function attShowDirty() {
+  const n = attEdits.size + attArrearsEdits.size;
+  const el = document.getElementById('att-dirty');
+  el.textContent = n ? n + (n === 1 ? ' unsaved change' : ' unsaved changes') : 'No unsaved changes.';
+  el.style.color = n ? 'var(--warn)' : '';
+}
+
+function loadAttendanceTab() {
+  const sel = document.getElementById('att-term');
+  const terms = attKnownTerms();
+  if (attTermStart === null) attTermStart = currentLodgeYearStart();
+  sel.innerHTML = terms.map(y =>
+    `<option value="${y}"${y === attTermStart ? ' selected' : ''}>${lodgeYearLabel(y)}</option>`).join('');
+  renderAttendanceGrid();
+}
+
+/* One listener for the table, because it is rebuilt on every filter. */
+document.getElementById('att-table').addEventListener('change', ev => {
+  const cell = ev.target.closest('select.att-cell');
+  if (cell) {
+    const k = cell.dataset.member + '|' + cell.dataset.month;
+    const m = fullRoster.find(x => x.memberId === cell.dataset.member);
+    const was = attStored(m)[cell.dataset.month] || '';
+    // Setting a cell back to what the sheet already holds is not an edit.
+    if (cell.value === was) attEdits.delete(k); else attEdits.set(k, cell.value);
+    renderAttendanceGrid();
+    return;
+  }
+  const box = ev.target.closest('input.att-arrears');
+  if (box) {
+    const m = fullRoster.find(x => x.memberId === box.dataset.member);
+    const was = Number(m.arrears) || 0;
+    const now = Number(box.value);
+    if (!Number.isFinite(now)) { box.value = was; return; }
+    if (now === was) attArrearsEdits.delete(m.memberId);
+    else attArrearsEdits.set(m.memberId, now);
+    attShowDirty();
+    box.classList.toggle('att-changed', attArrearsEdits.has(m.memberId));
+  }
+});
+
+['att-filter', 'att-scope'].forEach(id =>
+  document.getElementById(id).addEventListener('input', renderAttendanceGrid));
+document.getElementById('att-term').addEventListener('change', ev => {
+  attTermStart = Number(ev.target.value);
+  renderAttendanceGrid();
+});
+document.getElementById('att-revert').addEventListener('click', () => {
+  if (!attEdits.size && !attArrearsEdits.size) return;
+  if (!confirm('Throw away your unsaved edits?')) return;
+  attEdits.clear(); attArrearsEdits.clear();
+  renderAttendanceGrid();
+  document.getElementById('att-msg').textContent = 'Edits discarded. Nothing was sent.';
+});
+
+document.getElementById('att-save').addEventListener('click', async () => {
+  const msg = document.getElementById('att-msg');
+  if (!attEdits.size && !attArrearsEdits.size) { msg.textContent = 'Nothing to save.'; return; }
+
+  const byMonth = attGroupByMonth(attEdits);
+
+  const btn = document.getElementById('att-save');
+  btn.disabled = true;
+  const steps = byMonth.size + attArrearsEdits.size;
+  let done = 0, failed = [];
+  msg.innerHTML = `<span class="spinner"></span>Saving ${steps} change${steps === 1 ? '' : 's'}…`;
+
+  try {
+    for (const [month, entries] of byMonth) {
+      const res = await postAction({ action: 'rollCall', meetingMonth: month + '-01', entries });
+      if (res.error) failed.push(month + ': ' + res.error);
+      else { done++; entries.forEach(e => attEdits.delete(e.memberId + '|' + month)); }
+    }
+    for (const [memberId, arrears] of [...attArrearsEdits]) {
+      const res = await postAction({ action: 'updateMember', memberId, fields: { legacyArrears: arrears } });
+      if (res.error) failed.push(memberId + ': ' + res.error);
+      else { done++; attArrearsEdits.delete(memberId); }
+    }
+    msg.textContent = failed.length
+      ? `${done} of ${steps} saved. Not saved: ${failed.join('; ')}`
+      : `Saved. ${done} change${done === 1 ? '' : 's'} written.`;
+    toast(failed.length ? 'Some changes did not save.' : 'Saved.', failed.length ? 'bad' : 'ok');
+    await refreshRoster();
+    renderAttendanceGrid();
+  } catch (err) {
+    msg.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------------------------------------------------------------------
    MEMBER PHOTOGRAPHS — the Secretary's queue
 
    A picture is shown beside the one already on the record, because the
@@ -4822,6 +5133,7 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
     if (btn.dataset.sub === 'officers') loadOfficersAdmin();
     if (btn.dataset.sub === 'bulletin') loadBulletinAdmin();
     if (btn.dataset.sub === 'accounts') loadAccounts();
+    if (btn.dataset.sub === 'attendance') loadAttendanceTab();
     if (btn.dataset.sub === 'photos') loadPhotoQueue();
   });
 });

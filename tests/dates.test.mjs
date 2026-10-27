@@ -7,12 +7,13 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import assert from 'node:assert';
+import { appsScriptDir, appsScriptSource } from './_appsscript.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 globalThis.SpreadsheetApp = { getActiveSpreadsheet: () => ({ getSheetByName: () => null, getSpreadsheetTimeZone: () => '' }) };
 globalThis.Session = { getScriptTimeZone: () => 'Asia/Manila' };
 globalThis.Utilities = {};
 globalThis.Logger = { log: () => {} };
-const main = readFileSync(join(HERE, '..', '..', 'Noli Me Tangere System', 'appscript', 'apps-script.js'), 'utf8');
+const main = appsScriptSource();
 eval(main + '\nglobalThis.monthSerial_ = monthSerial_;');
 
 // Serials Google Sheets is known to produce (epoch 1899-12-30 = 0)
