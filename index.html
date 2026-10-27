@@ -995,6 +995,24 @@
   #att-table tr.att-ok    td.att-total{ color:var(--ok) }
   #att-table .att-changed{ outline:2px solid var(--warn); outline-offset:1px; border-radius:6px }
   #att-table tr.inactive td:first-child{ opacity:.6 }
+  /* The four figures at the top are the quickest way into the roll, so
+     they behave like what they are: a way of asking to see that list. */
+  .stat-card.is-filter{ cursor:pointer; position:relative }
+  .stat-card.is-filter:hover,
+  .stat-card.is-filter:focus-visible{ border-color:var(--gold-600,#c9a227); outline:none }
+  .stat-card.is-filter::after{
+    content:'Show the list'; position:absolute; left:0; right:0; bottom:7px;
+    font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-soft); opacity:0; transition:opacity .15s }
+  .stat-card.is-filter:hover::after,
+  .stat-card.is-filter:focus-visible::after{ opacity:.85 }
+  .stat-card.is-filter[aria-pressed="true"]{ border-color:var(--gold-600,#c9a227) }
+  .roster-chip{ display:inline-flex; align-items:center; gap:8px; padding:5px 10px;
+    border-radius:999px; background:var(--ink-600); border:1px solid var(--line-mid);
+    font-size:12.5px; color:var(--text) }
+  .roster-chip button{ background:none; border:none; color:var(--text-soft);
+    cursor:pointer; font-size:15px; line-height:1; padding:0 }
+  .roster-chip button:hover{ color:var(--text) }
   .roster-name{ display:flex; align-items:center; gap:10px }
   .roster-name .avatar-sm, .roster-name .avatar-fallback{ flex:none }
   .photo-req{ display:flex; gap:16px; align-items:center; flex-wrap:wrap;
@@ -1854,6 +1872,30 @@
             <option value="Y">Qualified to vote: Y</option>
             <option value="N">Qualified to vote: N</option>
           </select>
+          <select id="admin-money-filter">
+            <option value="">Money: All</option>
+            <option value="owing">Owing the Lodge</option>
+            <option value="clear">Owing nothing</option>
+            <option value="ahead">Paid ahead</option>
+          </select>
+          <select id="admin-lml-filter">
+            <option value="">Life Members: All</option>
+            <option value="Y">Life Members only</option>
+            <option value="N">Not Life Members</option>
+          </select>
+        </div>
+
+        <!-- What you are looking at, and how to get it out again. -->
+        <div class="toolbar" style="margin-top:4px">
+          <span class="rc-count" id="roster-count"></span>
+          <span id="roster-chip"></span>
+          <span style="flex:1"></span>
+          <select id="roster-export-scope" title="What to export">
+            <option value="view">What I am looking at</option>
+            <option value="all">The whole roster</option>
+          </select>
+          <button class="btn btn-sm" type="button" id="roster-export-xlsx">Export to Excel</button>
+          <button class="btn btn-sm" type="button" id="roster-export-csv">Export to CSV</button>
         </div>
         <div class="table-wrap">
           <table id="admin-table">
@@ -4138,15 +4180,29 @@ function renderAdmin() {
   });
   const statsEl = document.getElementById('admin-stats');
   statsEl.innerHTML = '';
+  /* Each figure is also the question behind it — "which ones?" — so each
+     card asks the roster that question when pressed. `view` is the set of
+     filters that produces exactly the brethren the number counted. */
   const cards = [
-    ['Total Members', fullRoster.length, '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>'],
-    ['In Good Standing', goodStanding, '<path d="M20 6 9 17l-5-5"/>'],
-    ['Qualified to Vote', qualified, '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'],
-    ['Total Arrears', '₱' + totalArrears.toLocaleString(), '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/>', 'P' + totalArrears],
+    ['Total Members', fullRoster.length, '<path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', undefined,
+      {}],
+    ['In Good Standing', goodStanding, '<path d="M20 6 9 17l-5-5"/>', undefined,
+      { 'admin-goodstanding-filter': 'Y' }],
+    ['Qualified to Vote', qualified, '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>', undefined,
+      { 'admin-vote-filter': 'Y' }],
+    ['Total Arrears', '₱' + totalArrears.toLocaleString(), '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/>', 'P' + totalArrears,
+      { 'admin-money-filter': 'owing' }],
   ];
-  cards.forEach(([lbl, num, iconPath, raw]) => {
+  cards.forEach(([lbl, num, iconPath, raw, view]) => {
     const div = document.createElement('div');
-    div.className = 'stat-card';
+    div.className = 'stat-card is-filter';
+    div.setAttribute('role', 'button');
+    div.setAttribute('tabindex', '0');
+    div.setAttribute('aria-pressed', 'false');
+    div.dataset.view = JSON.stringify(view || {});
+    div.title = Object.keys(view || {}).length
+      ? 'Show these ' + lbl.toLowerCase() + ' in the roster'
+      : 'Show everyone in the roster';
     div.setAttribute('data-kindle', '');
     div.innerHTML = `<svg class="icon icon-lg" viewBox="0 0 24 24">${iconPath}</svg>` +
       `<div class="num" data-countup="${raw === undefined ? num : raw}">${num}</div><div class="lbl">${lbl}</div>`;
@@ -4168,21 +4224,182 @@ function ynIcon(v) {
   return '—';
 }
 
+/* One place decides what is on screen, so Export cannot disagree with
+   the table it is sitting under — which is the whole value of an export
+   button next to a filter. */
+/* Pressing a figure asks the roster for the brethren it counted. Pressing
+   it again puts the roster back, because a filter you cannot undo by the
+   same gesture that set it is a trap. */
+function applyStatCard(card) {
+  const view = JSON.parse(card.dataset.view || '{}');
+  const alreadyOn = card.getAttribute('aria-pressed') === 'true';
+  clearRosterFilters();
+  if (!alreadyOn) {
+    Object.entries(view).forEach(([id, value]) => { document.getElementById(id).value = value; });
+  }
+  renderTable();
+  document.querySelector('.admin-subtab[data-sub="roster"]').click();
+  const table = document.getElementById('admin-table');
+  if (table) table.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+/* A card shows as pressed only when the roster is showing exactly what
+   that card counted — not merely when one of its filters happens to be
+   set, which would light up two cards at once and mean nothing. */
+function syncStatCards() {
+  const current = {};
+  ['admin-search', 'admin-status-filter', 'admin-goodstanding-filter',
+   'admin-vote-filter', 'admin-money-filter', 'admin-lml-filter']
+    .forEach(id => { const v = document.getElementById(id).value; if (v) current[id] = v; });
+  document.querySelectorAll('.stat-card.is-filter').forEach(card => {
+    const view = JSON.parse(card.dataset.view || '{}');
+    const keys = Object.keys(view);
+    const on = keys.length > 0 &&
+               keys.length === Object.keys(current).length &&
+               keys.every(k => current[k] === view[k]);
+    card.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
+document.getElementById('admin-stats').addEventListener('click', ev => {
+  const card = ev.target.closest('.stat-card.is-filter');
+  if (card) applyStatCard(card);
+});
+document.getElementById('admin-stats').addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter' && ev.key !== ' ') return;
+  const card = ev.target.closest('.stat-card.is-filter');
+  if (!card) return;
+  ev.preventDefault();
+  applyStatCard(card);
+});
+
+/* ---- getting it out again ------------------------------------------- */
+const ROSTER_EXPORT_COLUMNS = [
+  ['Name',              m => m.fullName || ''],
+  ['Year Raised',       m => m.yearRaised || ''],
+  ['Status',            m => m.status || ''],
+  ['Life Member',       m => (m.lml || 'N').toUpperCase() === 'Y' ? 'Y' : 'N'],
+  ['Good Standing',     m => m.goodStanding || ''],
+  ['Attendance',        m => m.attendanceTotal ?? ''],
+  ['Qualified to Vote', m => m.qualifiedToVote || ''],
+  ['Arrears',           m => Number(m.arrears) || 0],
+  ['Remarks',           m => m.remarks || m.attendanceRemarks || '']
+];
+
+function rosterExportRows(scope) {
+  const members = scope === 'all' ? fullRoster : rosterView();
+  return {
+    members,
+    header: ROSTER_EXPORT_COLUMNS.map(c => c[0]),
+    rows: members.map(m => ROSTER_EXPORT_COLUMNS.map(c => c[1](m)))
+  };
+}
+
+/* The file says what is in it. "roster.xlsx" on a desk three weeks later
+   is a file nobody can trust. */
+function rosterExportName(scope, ext) {
+  const stamp = new Date().toISOString().slice(0, 10);
+  if (scope === 'all') return `NMT42-roster-all-${stamp}.${ext}`;
+  const label = rosterViewLabel()
+    .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48).toLowerCase();
+  return `NMT42-roster-${label || 'view'}-${stamp}.${ext}`;
+}
+
+function doRosterExport(kind) {
+  const scope = document.getElementById('roster-export-scope').value;
+  const { members, header, rows } = rosterExportRows(scope);
+  if (!rows.length) { toast('Nothing to export — no brother matches.', 'bad'); return; }
+  if (kind === 'csv') {
+    downloadCsv(rosterExportName(scope, 'csv'), header, rows);
+  } else {
+    downloadXlsx(rosterExportName(scope, 'xlsx'), [{ name: 'Roster', header, rows }]);
+  }
+  toast(`${members.length} ${members.length === 1 ? 'brother' : 'brethren'} exported.`, 'ok');
+}
+
+document.getElementById('roster-export-xlsx').addEventListener('click', () => doRosterExport('xlsx'));
+document.getElementById('roster-export-csv').addEventListener('click', () => doRosterExport('csv'));
+['admin-money-filter', 'admin-lml-filter'].forEach(id =>
+  document.getElementById(id).addEventListener('change', renderTable));
+
+/* The decision itself, with no page attached, so it can be checked. A
+   brother paid ahead carries NEGATIVE arrears: he is neither owing nor
+   square, and lumping him in with either would misreport a man who has
+   paid early as one who has not paid at all. */
+function rosterMatches(m, f) {
+  const arrears = Number(m.arrears) || 0;
+  if (f.search && String(m.fullName || '').toLowerCase().indexOf(f.search) === -1) return false;
+  if (f.status && m.status !== f.status) return false;
+  if (f.goodStanding && String(m.goodStanding || '').toUpperCase() !== f.goodStanding) return false;
+  if (f.vote && String(m.qualifiedToVote || '').toUpperCase() !== f.vote) return false;
+  if (f.lml && String(m.lml || 'N').toUpperCase() !== f.lml) return false;
+  if (f.money === 'owing' && !(arrears > 0)) return false;
+  if (f.money === 'clear' && arrears !== 0) return false;
+  if (f.money === 'ahead' && !(arrears < 0)) return false;
+  return true;
+}
+
+function rosterFilters() {
+  const v = id => document.getElementById(id).value;
+  return {
+    search: v('admin-search').toLowerCase(),
+    status: v('admin-status-filter'),
+    goodStanding: v('admin-goodstanding-filter'),
+    vote: v('admin-vote-filter'),
+    money: v('admin-money-filter'),
+    lml: v('admin-lml-filter')
+  };
+}
+
+function rosterView() {
+  const f = rosterFilters();
+  return fullRoster.filter(m => rosterMatches(m, f));
+}
+
+/* A sentence describing the current view, for the chip and the file name. */
+function rosterViewLabel() {
+  const bits = [];
+  const v = id => document.getElementById(id).value;
+  if (v('admin-search')) bits.push('name contains "' + v('admin-search') + '"');
+  if (v('admin-status-filter')) bits.push(v('admin-status-filter'));
+  if (v('admin-goodstanding-filter')) bits.push('good standing ' + v('admin-goodstanding-filter'));
+  if (v('admin-vote-filter')) bits.push('qualified to vote ' + v('admin-vote-filter'));
+  if (v('admin-lml-filter')) bits.push(v('admin-lml-filter') === 'Y' ? 'Life Members' : 'not Life Members');
+  const money = { owing: 'owing the Lodge', clear: 'owing nothing', ahead: 'paid ahead' }[v('admin-money-filter')];
+  if (money) bits.push(money);
+  return bits.join(' \u00b7 ');
+}
+
+function clearRosterFilters() {
+  ['admin-search', 'admin-status-filter', 'admin-goodstanding-filter',
+   'admin-vote-filter', 'admin-money-filter', 'admin-lml-filter']
+    .forEach(id => { document.getElementById(id).value = ''; });
+  renderTable();
+}
+
 function renderTable() {
-  const search = document.getElementById('admin-search').value.toLowerCase();
-  const statusFilter = document.getElementById('admin-status-filter').value;
-  const goodStandingFilter = document.getElementById('admin-goodstanding-filter').value;
-  const voteFilter = document.getElementById('admin-vote-filter').value;
   const tbody = document.querySelector('#admin-table tbody');
   tbody.innerHTML = '';
-  fullRoster
-    .filter(m => {
-      const matchesSearch = !search || m.fullName.toLowerCase().indexOf(search) !== -1;
-      const matchesStatus = !statusFilter || m.status === statusFilter;
-      const matchesGoodStanding = !goodStandingFilter || (m.goodStanding || '').toUpperCase() === goodStandingFilter;
-      const matchesVote = !voteFilter || (m.qualifiedToVote || '').toUpperCase() === voteFilter;
-      return matchesSearch && matchesStatus && matchesGoodStanding && matchesVote;
-    })
+  const shown = rosterView();
+
+  const count = document.getElementById('roster-count');
+  if (count) {
+    const owed = shown.reduce((n, m) => n + Math.max(0, Number(m.arrears) || 0), 0);
+    count.textContent = shown.length + (shown.length === 1 ? ' brother' : ' brethren')
+      + (owed ? ' \u00b7 \u20B1' + owed.toLocaleString() + ' owed' : '');
+  }
+  const chip = document.getElementById('roster-chip');
+  if (chip) {
+    const label = rosterViewLabel();
+    chip.innerHTML = label
+      ? `<span class="roster-chip">${esc(label)}<button type="button" id="roster-chip-clear" aria-label="Show everyone again" title="Show everyone again">\u00d7</button></span>`
+      : '';
+    const clearBtn = document.getElementById('roster-chip-clear');
+    if (clearBtn) clearBtn.addEventListener('click', clearRosterFilters);
+  }
+  if (typeof syncStatCards === 'function') syncStatCards();
+
+  shown
     .forEach(m => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
