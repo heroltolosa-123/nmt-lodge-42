@@ -1886,6 +1886,16 @@
                style="margin:0;padding:13px 2px;font-size:16px">&mdash;</p>
           </div>
           <div><label class="hint">Arrears (&#8369;) &mdash; this is what decides good standing</label><input type="text" id="edit-arrears" inputmode="numeric"></div>
+          <div>
+            <label class="hint">Life Membership</label>
+            <label class="hint" style="display:flex;align-items:center;gap:9px;padding:11px 2px;margin:0;cursor:pointer">
+              <input type="checkbox" id="edit-lml" style="width:17px;height:17px;flex:none">
+              <span>Life Member (LML)</span>
+            </label>
+            <p class="hint" style="margin:0;font-size:11.5px">Conferred by the Grand Lodge, not by this
+               Lodge. It is kept apart from Status, so a Life Member can also be recorded as suspended
+               or deceased without the honour being lost.</p>
+          </div>
         </div>
         <label class="hint" style="display:block;margin-top:14px">Remarks</label>
         <input type="text" id="edit-remarks" style="width:100%">
@@ -4254,7 +4264,21 @@ async function postAction(payload) {
   return result;
 }
 
-const STATUS_OPTIONS = ['Regular', 'Dual', 'LML', 'Suspended', 'Expelled', 'Deceased', 'Needs Review', 'Unspecified'];
+/* LML is no longer among these: Life Membership is a Grand Lodge honour
+   with a column of its own, offered as a tick-box beside the status. */
+const STATUS_OPTIONS = ['Regular', 'Dual', 'Suspended', 'Expelled', 'Deceased', 'Needs Review', 'Unspecified'];
+
+/* The sheet holds standings this list has never contained — "Restored 2019",
+   "Expelled 2017", "LML or Suspended?". Building the dropdown from the list
+   alone left none of them selected, so the browser showed the first option
+   and saving quietly rewrote a brother's standing to Regular. His own
+   standing is always offered first, whether or not anyone thought of it. */
+function statusOptionsFor(current) {
+  const now = String(current || '').trim();
+  const known = STATUS_OPTIONS.slice();
+  if (now && !known.some(s => s.toLowerCase() === now.toLowerCase())) known.unshift(now);
+  return known;
+}
 
 async function refreshRoster() {
   const data = apiAuthAvailable
@@ -5555,9 +5579,11 @@ function openEditMember(memberId) {
   document.querySelectorAll('.admin-sub').forEach(s => s.style.display = 'none');
   document.getElementById('edit-member-id').value = m.memberId;
   const statusSel = document.getElementById('edit-status');
-  statusSel.innerHTML = STATUS_OPTIONS.map(s => `<option ${s === m.status ? 'selected' : ''}>${s}</option>`).join('');
+  statusSel.innerHTML = statusOptionsFor(m.status)
+    .map(s => `<option ${s === m.status ? 'selected' : ''}>${esc(s)}</option>`).join('');
   document.getElementById('edit-proficiency').value = m.proficiency || '';
   document.getElementById('edit-arrears').value = m.arrears || 0;
+  document.getElementById('edit-lml').checked = String(m.lml || '').toUpperCase() === 'Y';
   refreshGoodStanding();
   document.getElementById('edit-remarks').value = m.remarks || '';
   document.getElementById('edit-dob').value = m.dateOfBirth || '';
@@ -5588,6 +5614,9 @@ document.getElementById('edit-save-btn').addEventListener('click', async () => {
         // goodStanding is not sent: it is worked out from status and arrears.
         legacyArrears: document.getElementById('edit-arrears').value,
         remarks: document.getElementById('edit-remarks').value,
+        // Its own column now, so changing a brother's standing cannot
+        // take his Life Membership with it.
+        lml: document.getElementById('edit-lml').checked ? 'Y' : '',
         dateOfBirth: document.getElementById('edit-dob').value,
         contactNumber: document.getElementById('edit-contact').value,
         email: document.getElementById('edit-email').value,
