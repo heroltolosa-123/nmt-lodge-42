@@ -4170,14 +4170,15 @@ document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.k
 function renderAdmin() {
   // stat cards
   const statusCounts = {};
-  let totalArrears = 0, goodStanding = 0, qualified = 0;
+  let goodStanding = 0, qualified = 0;
   fullRoster.forEach(m => {
     const s = m.status || 'Unspecified';
     statusCounts[s] = (statusCounts[s] || 0) + 1;
-    totalArrears += Number(m.arrears) || 0;
     if (m.goodStanding === 'Y') goodStanding++;
     if ((m.qualifiedToVote || '').toUpperCase() === 'Y') qualified++;
   });
+  const money = rosterMoney(fullRoster);
+  const totalArrears = money.owed;
   const statsEl = document.getElementById('admin-stats');
   statsEl.innerHTML = '';
   /* Each figure is also the question behind it — "which ones?" — so each
@@ -4190,9 +4191,17 @@ function renderAdmin() {
       { 'admin-goodstanding-filter': 'Y' }],
     ['Qualified to Vote', qualified, '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>', undefined,
       { 'admin-vote-filter': 'Y' }],
-    ['Total Arrears', '₱' + totalArrears.toLocaleString(), '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/>', 'P' + totalArrears,
+    ['Owed to the Lodge', '₱' + totalArrears.toLocaleString(), '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 2.5-2h.5a2 2 0 1 1 0 4H10a2 2 0 1 0 0 4h.5a2.5 2.5 0 0 0 2.5-2M12 6v1.2M12 16.8V18"/>', 'P' + totalArrears,
       { 'admin-money-filter': 'owing' }],
   ];
+  /* Only shown when the Lodge is actually holding money in advance, so
+     the row does not carry a permanent zero nobody needs. */
+  if (money.credit > 0) {
+    cards.push(['Paid in Advance', '₱' + money.credit.toLocaleString(),
+      '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>', 'P' + money.credit,
+      { 'admin-money-filter': 'ahead' }]);
+  }
+
   cards.forEach(([lbl, num, iconPath, raw, view]) => {
     const div = document.createElement('div');
     div.className = 'stat-card is-filter';
@@ -4321,6 +4330,22 @@ document.getElementById('roster-export-xlsx').addEventListener('click', () => do
 document.getElementById('roster-export-csv').addEventListener('click', () => doRosterExport('csv'));
 ['admin-money-filter', 'admin-lml-filter'].forEach(id =>
   document.getElementById(id).addEventListener('change', renderTable));
+
+/* What the Lodge is owed, and what it is holding in advance.
+
+   These must be counted apart. Adding every arrears field together lets
+   one brother who has paid a year ahead cancel out another brother's
+   debt, and the figure at the top of the dashboard then reports the
+   Lodge as owed nothing while a man owes 6,200. That is exactly what it
+   did the day the first advance payment was recorded. */
+function rosterMoney(members) {
+  let owed = 0, credit = 0;
+  (members || []).forEach(m => {
+    const a = Number(m.arrears) || 0;
+    if (a > 0) owed += a; else credit -= a;
+  });
+  return { owed: owed, credit: credit };
+}
 
 /* The decision itself, with no page attached, so it can be checked. A
    brother paid ahead carries NEGATIVE arrears: he is neither owing nor

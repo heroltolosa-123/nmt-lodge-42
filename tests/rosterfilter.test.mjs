@@ -16,8 +16,9 @@ function grab(name) {
   return src.slice(start, end + 2);
 }
 const ctx = {};
-new Function('ctx', grab('rosterMatches') + '\nctx.rosterMatches = rosterMatches;')(ctx);
-const { rosterMatches } = ctx;
+new Function('ctx', grab('rosterMatches') + '\n' + grab('rosterMoney') +
+  '\nctx.rosterMatches = rosterMatches; ctx.rosterMoney = rosterMoney;')(ctx);
+const { rosterMatches, rosterMoney } = ctx;
 
 const ROLL = [
   { fullName: 'Arnel D Cantos',       status: 'Regular',   lml: 'Y', goodStanding: 'Y', qualifiedToVote: 'Y', arrears: 0 },
@@ -80,5 +81,27 @@ for (const a of [null, undefined, '', 'rubbish', NaN]) {
   assert.ok(!rosterMatches({ fullName: 'Odd', arrears: a }, F({ money: 'owing' })));
 }
 console.log('PASS  an unreadable arrears figure never invents a debt');
+
+/* ---- what the Lodge is owed ------------------------------------------
+   Adding every arrears field together lets one brother who has paid a
+   year ahead cancel out another brother's debt. The headline then reads
+   "owed nothing" while a man owes 6,200 — which is what it did on the
+   day the first advance payment was recorded. */
+let money = rosterMoney(ROLL);
+assert.strictEqual(money.owed, 6200, 'only debts are owed to the Lodge');
+assert.strictEqual(money.credit, 6200, 'and the credit is counted separately');
+assert.notStrictEqual(money.owed, ROLL.reduce((n, m) => n + m.arrears, 0),
+  'the plain sum is 0 here, which is the whole bug');
+console.log('PASS  a credit never cancels another brother\'s debt');
+
+money = rosterMoney([{ arrears: 1000 }, { arrears: 2000 }]);
+assert.deepStrictEqual(money, { owed: 3000, credit: 0 }, 'debts add up');
+money = rosterMoney([{ arrears: -500 }, { arrears: -1500 }]);
+assert.deepStrictEqual(money, { owed: 0, credit: 2000 }, 'credits add up, and as a positive figure');
+assert.deepStrictEqual(rosterMoney([]), { owed: 0, credit: 0 }, 'an empty roll owes nothing');
+assert.deepStrictEqual(rosterMoney(), { owed: 0, credit: 0 }, 'and no roll at all does not throw');
+assert.deepStrictEqual(rosterMoney([{ arrears: 'rubbish' }, { arrears: null }, {}]),
+  { owed: 0, credit: 0 }, 'unreadable figures add nothing either way');
+console.log('PASS  debts and credits each add up on their own, and rubbish adds nothing');
 
 console.log('\nall checks passed');
