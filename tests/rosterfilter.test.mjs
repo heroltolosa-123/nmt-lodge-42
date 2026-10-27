@@ -16,9 +16,10 @@ function grab(name) {
   return src.slice(start, end + 2);
 }
 const ctx = {};
-new Function('ctx', grab('rosterMatches') + '\n' + grab('rosterMoney') +
-  '\nctx.rosterMatches = rosterMatches; ctx.rosterMoney = rosterMoney;')(ctx);
-const { rosterMatches, rosterMoney } = ctx;
+new Function('ctx', grab('rosterAttention') + '\n' + grab('rosterMatches') + '\n' + grab('rosterMoney') +
+  '\nctx.rosterMatches = rosterMatches; ctx.rosterMoney = rosterMoney;' +
+  'ctx.rosterAttention = rosterAttention;')(ctx);
+const { rosterMatches, rosterMoney, rosterAttention } = ctx;
 
 const ROLL = [
   { fullName: 'Arnel D Cantos',       status: 'Regular',   lml: 'Y', goodStanding: 'Y', qualifiedToVote: 'Y', arrears: 0 },
@@ -103,5 +104,50 @@ assert.deepStrictEqual(rosterMoney(), { owed: 0, credit: 0 }, 'and no roll at al
 assert.deepStrictEqual(rosterMoney([{ arrears: 'rubbish' }, { arrears: null }, {}]),
   { owed: 0, credit: 0 }, 'unreadable figures add nothing either way');
 console.log('PASS  debts and credits each add up on their own, and rubbish adds nothing');
+
+/* ---- records the system cannot settle for itself ---------------------
+   A list that flags everything slightly untidy is ignored within a week,
+   so what it does NOT flag matters as much as what it does. */
+const reasons = m => rosterAttention(m);
+
+assert.deepStrictEqual(reasons({ status: 'LML or Suspended?', yearRaised: 1998 }),
+  ['Standing not settled'], 'a status with a question mark is the sheet asking, and is flagged');
+assert.deepStrictEqual(reasons({ status: '', yearRaised: 2004 }),
+  ['No standing recorded'], 'a blank standing is flagged');
+assert.deepStrictEqual(reasons({ status: 'Needs Review', yearRaised: 2004 }),
+  ['Marked for review'], 'one marked for review is flagged');
+assert.deepStrictEqual(reasons({ status: 'Regular', yearRaised: '' }),
+  ['Year raised missing'], 'a missing year is flagged');
+console.log('PASS  an unsettled standing, a blank one and a missing year are each flagged');
+
+/* The ones that must stay quiet. "Restored 2019" is a real standing,
+   written verbosely; flagging it would nag the Secretary forever about
+   something that is not wrong. */
+for (const st of ['Restored 2019', 'Expelled 2017', 'Restored 2017', 'Expelled 2010',
+                  'Regular', 'Suspended', 'Deceased', 'Dual']) {
+  assert.deepStrictEqual(reasons({ status: st, yearRaised: 2004 }), [],
+    `"${st}" is a real standing and must NOT be flagged`);
+}
+console.log('PASS  a verbose but real standing is left alone, not nagged about');
+
+// two faults on one record are both named
+assert.deepStrictEqual(reasons({ status: '', yearRaised: '' }),
+  ['No standing recorded', 'Year raised missing'], 'both are reported, not just the first');
+// a Life Member with no standing is still missing a standing
+assert.ok(reasons({ status: '', yearRaised: 2004, lml: 'Y' }).length === 1,
+  'Life Membership is not a standing and does not fill the gap');
+console.log('PASS  several faults on one record are all named, and LML fills no gap');
+
+// the filter only keeps the flagged ones
+const MIXED = [
+  { fullName: 'Settled',   status: 'Regular',           yearRaised: 2004, arrears: 0 },
+  { fullName: 'Unsettled', status: 'LML or Suspended?', yearRaised: 1998, arrears: 0 },
+  { fullName: 'No Year',   status: 'Regular',           yearRaised: '',   arrears: 0 }
+];
+const flagged = MIXED.filter(m => rosterMatches(m, F({ attention: true }))).map(m => m.fullName);
+assert.deepStrictEqual(flagged, ['Unsettled', 'No Year']);
+assert.strictEqual(MIXED.filter(m => rosterMatches(m, F({}))).length, 3,
+  'with the filter off, nothing is hidden');
+console.log('PASS  the filter keeps exactly the records needing a decision');
 
 console.log('\nall checks passed');

@@ -1883,6 +1883,10 @@
             <option value="Y">Life Members only</option>
             <option value="N">Not Life Members</option>
           </select>
+          <select id="admin-attention-filter">
+            <option value="">Records: All</option>
+            <option value="Y">Needing a decision</option>
+          </select>
         </div>
 
         <!-- What you are looking at, and how to get it out again. -->
@@ -4196,6 +4200,13 @@ function renderAdmin() {
   ];
   /* Only shown when the Lodge is actually holding money in advance, so
      the row does not carry a permanent zero nobody needs. */
+  const needing = fullRoster.filter(m => rosterAttention(m).length > 0).length;
+  if (needing > 0) {
+    cards.push(['Needing a Decision', needing,
+      '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>', undefined,
+      { 'admin-attention-filter': 'Y' }]);
+  }
+
   if (money.credit > 0) {
     cards.push(['Paid in Advance', '₱' + money.credit.toLocaleString(),
       '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>', 'P' + money.credit,
@@ -4258,7 +4269,8 @@ function applyStatCard(card) {
 function syncStatCards() {
   const current = {};
   ['admin-search', 'admin-status-filter', 'admin-goodstanding-filter',
-   'admin-vote-filter', 'admin-money-filter', 'admin-lml-filter']
+   'admin-vote-filter', 'admin-money-filter', 'admin-lml-filter',
+   'admin-attention-filter']
     .forEach(id => { const v = document.getElementById(id).value; if (v) current[id] = v; });
   document.querySelectorAll('.stat-card.is-filter').forEach(card => {
     const view = JSON.parse(card.dataset.view || '{}');
@@ -4292,7 +4304,8 @@ const ROSTER_EXPORT_COLUMNS = [
   ['Attendance',        m => m.attendanceTotal ?? ''],
   ['Qualified to Vote', m => m.qualifiedToVote || ''],
   ['Arrears',           m => Number(m.arrears) || 0],
-  ['Remarks',           m => m.remarks || m.attendanceRemarks || '']
+  ['Remarks',           m => m.remarks || m.attendanceRemarks || ''],
+  ['Needs a Decision',   m => rosterAttention(m).join('; ')]
 ];
 
 function rosterExportRows(scope) {
@@ -4328,8 +4341,26 @@ function doRosterExport(kind) {
 
 document.getElementById('roster-export-xlsx').addEventListener('click', () => doRosterExport('xlsx'));
 document.getElementById('roster-export-csv').addEventListener('click', () => doRosterExport('csv'));
-['admin-money-filter', 'admin-lml-filter'].forEach(id =>
+['admin-money-filter', 'admin-lml-filter', 'admin-attention-filter'].forEach(id =>
   document.getElementById(id).addEventListener('change', renderTable));
+
+/* Records the system cannot settle for itself.
+
+   Deliberately narrow. A list that flags everything slightly untidy gets
+   ignored within a week, so this names only what genuinely needs a
+   brother's decision or a missing fact — never a style the Secretary has
+   chosen. "Restored 2019" is a real standing, verbosely written, and is
+   NOT flagged; "LML or Suspended?" is the sheet asking a question, and
+   is. */
+function rosterAttention(m) {
+  const reasons = [];
+  const status = String(m.status || '').trim();
+  if (!status) reasons.push('No standing recorded');
+  else if (status.indexOf('?') !== -1) reasons.push('Standing not settled');
+  else if (status === 'Unspecified' || status === 'Needs Review') reasons.push('Marked for review');
+  if (!String(m.yearRaised || '').trim()) reasons.push('Year raised missing');
+  return reasons;
+}
 
 /* What the Lodge is owed, and what it is holding in advance.
 
@@ -4361,6 +4392,7 @@ function rosterMatches(m, f) {
   if (f.money === 'owing' && !(arrears > 0)) return false;
   if (f.money === 'clear' && arrears !== 0) return false;
   if (f.money === 'ahead' && !(arrears < 0)) return false;
+  if (f.attention && rosterAttention(m).length === 0) return false;
   return true;
 }
 
@@ -4372,7 +4404,8 @@ function rosterFilters() {
     goodStanding: v('admin-goodstanding-filter'),
     vote: v('admin-vote-filter'),
     money: v('admin-money-filter'),
-    lml: v('admin-lml-filter')
+    lml: v('admin-lml-filter'),
+    attention: v('admin-attention-filter') === 'Y'
   };
 }
 
@@ -4390,6 +4423,7 @@ function rosterViewLabel() {
   if (v('admin-goodstanding-filter')) bits.push('good standing ' + v('admin-goodstanding-filter'));
   if (v('admin-vote-filter')) bits.push('qualified to vote ' + v('admin-vote-filter'));
   if (v('admin-lml-filter')) bits.push(v('admin-lml-filter') === 'Y' ? 'Life Members' : 'not Life Members');
+  if (v('admin-attention-filter')) bits.push('needing a decision');
   const money = { owing: 'owing the Lodge', clear: 'owing nothing', ahead: 'paid ahead' }[v('admin-money-filter')];
   if (money) bits.push(money);
   return bits.join(' \u00b7 ');
@@ -4397,7 +4431,8 @@ function rosterViewLabel() {
 
 function clearRosterFilters() {
   ['admin-search', 'admin-status-filter', 'admin-goodstanding-filter',
-   'admin-vote-filter', 'admin-money-filter', 'admin-lml-filter']
+   'admin-vote-filter', 'admin-money-filter', 'admin-lml-filter',
+   'admin-attention-filter']
     .forEach(id => { document.getElementById(id).value = ''; });
   renderTable();
 }
@@ -4435,7 +4470,7 @@ function renderTable() {
         <td>${m.attendanceTotal ?? '—'}</td>
         <td>${ynIcon(m.qualifiedToVote)}</td>
         <td>${m.arrears ? '₱' + Number(m.arrears).toLocaleString() : '—'}</td>
-        <td>${m.remarks || m.attendanceRemarks || ''}</td>
+        <td>${rosterAttention(m).map(r => `<span class="badge warn" style="margin-right:5px">${esc(r)}</span>`).join('')}${esc(m.remarks || m.attendanceRemarks || '')}</td>
         <td><button class="btn editors-only" style="padding:6px 12px;font-size:13px" data-edit="${m.memberId}"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</span></button></td>
       `;
       tbody.appendChild(tr);
