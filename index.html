@@ -4889,13 +4889,9 @@ let loadReportsTab = () => {};
   }
 
   function describe() {
-    const { from, to } = range();
     const n = attendanceRows().length;
-    const span = !from && !to ? 'every recorded month'
-      : from && to ? from + ' to ' + to
-      : from ? 'from ' + from + ' onward'
-      : 'up to ' + to;
-    note.textContent = n + ' attendance record' + (n === 1 ? '' : 's') + ' — ' + span + '.';
+    note.textContent = n + ' attendance record' + (n === 1 ? '' : 's') + ' \u2014 '
+      + spanWords() + '.';
   }
 
   const money = n => (Number(n) || 0) < 0
