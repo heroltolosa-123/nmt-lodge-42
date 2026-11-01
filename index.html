@@ -1819,7 +1819,7 @@
 
         <div class="report-row" style="align-items:flex-end">
           <div>
-            <label class="hint" for="rep-from" style="display:block;margin-bottom:6px">Attendance from</label>
+            <label class="hint" for="rep-from" style="display:block;margin-bottom:6px">From month</label>
             <input type="month" id="rep-from" aria-describedby="rep-range-note">
           </div>
           <div>
@@ -1830,6 +1830,45 @@
           <button class="btn btn-sm" type="button" id="rep-clear">All months</button>
         </div>
         <p class="hint" id="rep-range-note" role="status" aria-live="polite" style="margin-top:10px">&nbsp;</p>
+
+        <h3 style="margin:26px 0 2px;font-size:17px">Not once at Lodge</h3>
+        <p class="hint" style="margin-top:0">Every active brother with no attendance counted in the
+           months chosen above. <strong>C</strong>, <strong>NO</strong> and <strong>NC</strong>
+           count; <strong>NP</strong> and a blank do not &mdash; so whatever marks he does have are
+           shown beside him, because a brother marked NP all year and a brother with nothing
+           recorded at all are not the same case.</p>
+        <p class="hint" id="rep-zero-count" role="status" aria-live="polite"></p>
+        <div class="table-wrap" style="max-height:420px">
+          <table id="rep-zero-table">
+            <thead><tr><th>Brother</th><th>Standing</th><th>Raised</th><th>Arrears</th>
+              <th>Marks in these months</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="search-row" style="margin-top:10px">
+          <button class="btn btn-sm" type="button" id="rep-zero-csv">Export this list</button>
+        </div>
+
+        <h3 style="margin:30px 0 2px;font-size:17px">Dues paid</h3>
+        <p class="hint" style="margin-top:0">The payment book, over the same months. A payment
+           recorded through this dashboard carries the day it was taken and is matched on that
+           month; an older entry carries only its dues year, so that is what it is matched on.
+           The count below says how many of each.</p>
+        <div class="search-row" style="margin-top:10px">
+          <button class="btn btn-sm" type="button" id="rep-dues-load">Read the payment book</button>
+          <button class="btn btn-sm" type="button" id="rep-dues-csv">Export this list</button>
+          <span class="hint" id="rep-dues-msg" role="status" aria-live="polite"></span>
+        </div>
+        <p class="hint" id="rep-dues-count" role="status" aria-live="polite"></p>
+        <div class="table-wrap" style="max-height:420px">
+          <table id="rep-dues-table">
+            <thead><tr><th>Recorded</th><th>Brother</th><th>Dues year</th><th>Amount</th>
+              <th>Status</th><th>Note</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin:30px 0 2px;font-size:17px">Download</h3>
 
         <div class="report-row">
           <button class="btn" type="button" id="rep-xlsx">
@@ -2778,6 +2817,13 @@ async function lookupMember(q) {
    --------------------------------------------------------------------- */
 const MONTH_INDEX = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
                       jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+
+/* Which marks count toward the six needed to vote, and which standings put a
+   brother off the active roll. Declared here, above everything that reads
+   them, because Reports renders its lists while the page is still parsing and
+   a const declared further down does not exist yet when it does. */
+const ATT_COUNTED = new Set(['C', 'NO', 'NC']);
+const INACTIVE_RE = /suspend|expel|decease|dropped|demit/i;
 
 function lodgeYearOf(label) {
   const m = String(label || '').trim().match(/^([A-Za-z]{3})[a-z]*\s+(\d{4})$/);
@@ -4804,6 +4850,10 @@ function currentTermRange() {
   return { from: start + '-03', to: (start + 1) + '-02' };
 }
 
+/* Set by wireReports below, so the sub-tab switcher can refresh the lists
+   when the tab is opened. */
+let loadReportsTab = () => {};
+
 (function wireReports() {
   const roster = document.getElementById('rep-roster');
   if (!roster) return;
@@ -4848,20 +4898,191 @@ function currentTermRange() {
     note.textContent = n + ' attendance record' + (n === 1 ? '' : 's') + ' — ' + span + '.';
   }
 
-  fromEl.addEventListener('change', describe);
-  toEl.addEventListener('change', describe);
+  const money = n => (Number(n) || 0) < 0
+    ? '\u20b1' + Math.abs(Number(n)).toLocaleString() + ' ahead'
+    : '\u20b1' + (Number(n) || 0).toLocaleString();
+
+  /* The months as a Secretary would say them, for the sentence above each
+     list. "2026-01 to 2026-10" is a range; "Jan 2026 to Oct 2026" is a
+     report. */
+  function spanWords() {
+    const { from, to } = range();
+    const say = k => {
+      if (!k) return '';
+      const n = Number(k.slice(5, 7));
+      return (MONTH_NAMES[n - 1] || k.slice(5, 7)) + ' ' + k.slice(0, 4);
+    };
+    if (!from && !to) return 'in any month on record';
+    if (from && to) return from === to ? 'in ' + say(from) : 'between ' + say(from) + ' and ' + say(to);
+    return from ? 'from ' + say(from) + ' onward' : 'up to ' + say(to);
+  }
+
+  /* --------------------------------------------------------------------
+     NOT ONCE AT LODGE
+
+     The marks a brother has inside the chosen months, and whether any of
+     them counted. Inactive brethren are left out: a deceased or suspended
+     brother has not failed to attend, and a list that names him is a list
+     nobody trusts.
+     -------------------------------------------------------------------- */
+  function marksInRange(m) {
+    const { from, to } = range();
+    return (m.months || []).filter(mo => {
+      const k = monthKey(mo.month || mo.label || '');
+      if (!k) return false;
+      if (from && k < from) return false;
+      if (to && k > to) return false;
+      return true;
+    });
+  }
+
+  function zeroAttendance() {
+    return fullRoster
+      .filter(m => !INACTIVE_RE.test(String(m.status || '')))
+      .map(m => {
+        const marks = marksInRange(m);
+        const counted = marks.filter(mo =>
+          ATT_COUNTED.has(String(mo.value || mo.code || '').trim().toUpperCase()));
+        return { m, marks, counted };
+      })
+      .filter(r => r.counted.length === 0)
+      .sort((a, b) => String(a.m.fullName).localeCompare(String(b.m.fullName)));
+  }
+
+  const markWords = marks => marks
+    .map(mo => (String(mo.value || mo.code || '').trim().toUpperCase() || '\u2014') +
+               ' ' + (mo.month || mo.label || ''))
+    .join(', ');
+
+  function renderZeroList() {
+    const rows = zeroAttendance();
+    const active = fullRoster.filter(m => !INACTIVE_RE.test(String(m.status || ''))).length;
+    document.getElementById('rep-zero-count').textContent = !fullRoster.length
+      ? 'The roster has not loaded yet.'
+      : rows.length + ' of ' + active + ' active brethren were not once at Lodge '
+        + spanWords() + '.';
+    document.querySelector('#rep-zero-table tbody').innerHTML = rows.map(r =>
+      '<tr><td><span class="roster-name">' + avatarHtml(r.m, 'avatar-sm') +
+        '<span>' + esc(r.m.fullName) + '</span></span></td>' +
+      '<td>' + esc(r.m.status || '\u2014') + '</td>' +
+      '<td>' + esc(String(r.m.yearRaised || '\u2014')) + '</td>' +
+      '<td>' + money(r.m.arrears) + '</td>' +
+      '<td class="hint">' + esc(markWords(r.marks) || 'nothing recorded') + '</td></tr>'
+    ).join('') || '<tr><td colspan="5" class="hint">' + (fullRoster.length
+      ? 'Every active brother was at Lodge at least once in these months.'
+      : 'Nothing to show yet.') + '</td></tr>';
+  }
+
+  /* --------------------------------------------------------------------
+     DUES PAID
+
+     The Dues tab is the payment book, and it keeps a dues YEAR. Only a row
+     written through this dashboard carries the day the money was taken, so
+     a row with a date is matched by month and a row without one by its
+     year. The count says how many of each, because "2026" and
+     "3 October 2026" are not the same evidence and the Secretary should
+     not have to guess which he is looking at.
+     -------------------------------------------------------------------- */
+  let duesBook = null;          // null until the book has been read
+
+  function duesInRange(d) {
+    const { from, to } = range();
+    if (d.paidOn) {
+      const k = String(d.paidOn).slice(0, 7);
+      if (from && k < from) return false;
+      if (to && k > to) return false;
+      return true;
+    }
+    const y = Number(d.year) || 0;
+    // Neither a date nor a year: it cannot be placed in time, so it shows
+    // only when no range is asked for rather than being quietly dropped.
+    if (!y) return !from && !to;
+    if (from && y < Number(from.slice(0, 4))) return false;
+    if (to && y > Number(to.slice(0, 4))) return false;
+    return true;
+  }
+
+  function duesRows() {
+    return (duesBook || [])
+      .filter(duesInRange)
+      .map(d => {
+        const m = fullRoster.find(x => x.memberId === d.memberId);
+        return { ...d, fullName: d.fullName || (m && m.fullName) || d.memberId || '\u2014' };
+      })
+      .sort((a, b) => String(b.paidOn || b.year || '').localeCompare(String(a.paidOn || a.year || ''))
+                   || String(a.fullName).localeCompare(String(b.fullName)));
+  }
+
+  function renderDuesList() {
+    const count = document.getElementById('rep-dues-count');
+    const tbody = document.querySelector('#rep-dues-table tbody');
+    if (duesBook === null) {
+      count.textContent = '';
+      tbody.innerHTML = '<tr><td colspan="6" class="hint">Press '
+        + '\u201cRead the payment book\u201d to list the payments on record.</td></tr>';
+      return;
+    }
+    const rows = duesRows();
+    const byDate = rows.filter(d => d.paidOn).length;
+    const paid = rows.filter(d => String(d.status).toLowerCase() === 'paid');
+    const total = paid.reduce((n, d) => n + (Number(d.amount) || 0), 0);
+    count.textContent = rows.length + ' entr' + (rows.length === 1 ? 'y' : 'ies') + ' '
+      + spanWords() + ' \u2014 ' + byDate + ' matched on the day recorded, '
+      + (rows.length - byDate) + ' on the dues year alone. '
+      + paid.length + ' marked Paid, ' + money(total) + ' in all.';
+    tbody.innerHTML = rows.map(d =>
+      '<tr><td>' + esc(d.paidOn || '\u2014') + '</td>' +
+      '<td>' + esc(d.fullName) + '</td>' +
+      '<td>' + esc(String(d.year || '\u2014')) + '</td>' +
+      '<td>' + money(d.amount) + '</td>' +
+      '<td>' + esc(d.status || '\u2014') + '</td>' +
+      '<td class="hint">' + esc(d.note || '') + '</td></tr>'
+    ).join('') || '<tr><td colspan="6" class="hint">No payment is recorded '
+      + esc(spanWords()) + '.</td></tr>';
+  }
+
+  async function readDuesBook() {
+    const msg = document.getElementById('rep-dues-msg');
+    msg.innerHTML = '<span class="spinner"></span>Reading the payment book\u2026';
+    try {
+      const data = await jsonp({ action: 'dues', key: adminKey() });
+      if (data.error) { msg.textContent = data.error; return; }
+      duesBook = data.dues || [];
+      msg.textContent = '';
+      renderDuesList();
+    } catch (err) {
+      msg.textContent = err.message;
+    }
+  }
+
+  function refresh() { describe(); renderZeroList(); renderDuesList(); }
+  loadReportsTab = refresh;
+
+  fromEl.addEventListener('change', refresh);
+  toEl.addEventListener('change', refresh);
   document.getElementById('rep-clear').addEventListener('click', () => {
-    fromEl.value = ''; toEl.value = ''; describe();
+    fromEl.value = ''; toEl.value = ''; refresh();
   });
   document.getElementById('rep-term').addEventListener('click', () => {
     const t = currentTermRange();
-    fromEl.value = t.from; toEl.value = t.to; describe();
+    fromEl.value = t.from; toEl.value = t.to; refresh();
   });
+  document.getElementById('rep-dues-load').addEventListener('click', readDuesBook);
 
   const ATT_HEADER = ['Member ID', 'Full name', 'Month', 'Sortable month', 'Code'];
   const ROSTER_HEADER = ['Member ID', 'Full name', 'Year raised', 'Status', 'Proficiency',
     'Good standing', 'Qualified to vote', 'Arrears', 'Attendance this term', 'LML'];
   const ARREARS_HEADER = ['Member ID', 'Full name', 'Status', 'Arrears', 'Good standing'];
+  const ZERO_HEADER = ['Member ID', 'Full name', 'Status', 'Year raised', 'Arrears',
+    'Marks in range'];
+  const DUES_HEADER = ['Due ID', 'Member ID', 'Full name', 'Dues year', 'Amount', 'Status',
+    'Day recorded', 'Note'];
+
+  const zeroExportRows = () => zeroAttendance().map(r => [r.m.memberId, r.m.fullName, r.m.status,
+    r.m.yearRaised, Number(r.m.arrears) || 0, markWords(r.marks)]);
+
+  const duesExportRows = () => duesRows().map(d => [d.dueId, d.memberId, d.fullName, d.year,
+    Number(d.amount) || 0, d.status, d.paidOn || '', d.note || '']);
 
   const rosterRows = () => fullRoster.map(m => [m.memberId, m.fullName, m.yearRaised, m.status,
     m.proficiency, m.goodStanding, m.qualifiedToVote, Number(m.arrears) || 0, m.attendanceTotal, m.lml]);
@@ -4883,6 +5104,14 @@ function currentTermRange() {
   document.getElementById('rep-arrears').addEventListener('click', () => downloadCsv(
     'nmt42-arrears-' + stamp() + '.csv', ARREARS_HEADER, arrearsRows()));
 
+  document.getElementById('rep-zero-csv').addEventListener('click', () => downloadCsv(
+    'nmt42-no-attendance-' + stamp() + '.csv', ZERO_HEADER, zeroExportRows()));
+
+  document.getElementById('rep-dues-csv').addEventListener('click', () => {
+    if (duesBook === null) { toast('Read the payment book first.', 'bad'); return; }
+    downloadCsv('nmt42-dues-paid-' + stamp() + '.csv', DUES_HEADER, duesExportRows());
+  });
+
   document.getElementById('rep-xlsx').addEventListener('click', () => {
     const { from, to } = range();
     const span = !from && !to ? 'all months' : (from || 'start') + ' to ' + (to || 'latest');
@@ -4890,18 +5119,22 @@ function currentTermRange() {
       { name: 'Roster', header: ROSTER_HEADER, rows: rosterRows() },
       { name: 'Attendance', header: ATT_HEADER, rows: attendanceRows() },
       { name: 'Arrears', header: ARREARS_HEADER, rows: arrearsRows() },
+      { name: 'Not once at Lodge', header: ZERO_HEADER, rows: zeroExportRows() },
+      { name: 'Dues paid', header: DUES_HEADER, rows: duesExportRows() },
       { name: 'About', header: ['Field', 'Value'], rows: [
         ['Lodge', 'Noli Me Tangere Lodge No. 42, F. & A. M.'],
         ['Exported', new Date().toLocaleString()],
         ['Attendance range', span],
         ['Members', fullRoster.length],
         ['Attendance records', attendanceRows().length],
+        ['Not once at Lodge', zeroAttendance().length],
+        ['Dues entries', duesBook === null ? 'payment book not read' : duesRows().length],
         ['Note', 'Contains member names and standing. Treat it as the Lodge book.']
       ] }
     ]);
   });
 
-  describe();
+  refresh();
 })();
 
 /* ---------------------------------------------------------------------
@@ -5282,7 +5515,6 @@ document.getElementById('fc-reset').addEventListener('click', () => {
    script takes. An emptied cell is sent as an empty code, which the
    script reads as "take this mark off".
    --------------------------------------------------------------------- */
-const ATT_COUNTED = new Set(['C', 'NO', 'NC']);
 const ATT_MONTH_NAMES = ['Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb'];
 let attTermStart = null;
 let attEdits = new Map();        // "memberId|YYYY-MM" -> code
@@ -5364,7 +5596,6 @@ function attRows() {
     .sort((a, b) => String(a.fullName).localeCompare(String(b.fullName)));
 }
 
-const INACTIVE_RE = /suspend|expel|decease|dropped|demit/i;
 
 function renderAttendanceGrid() {
   if (attTermStart === null) attTermStart = currentLodgeYearStart();
@@ -5800,6 +6031,7 @@ document.querySelectorAll('.admin-subtab').forEach(btn => {
     document.getElementById('sub-' + btn.dataset.sub).style.display = 'block';
     if (btn.dataset.sub === 'rollcall') renderRollCallTable();
     if (btn.dataset.sub === 'dues') renderDuesMemberList();
+    if (btn.dataset.sub === 'reports') loadReportsTab();
     if (btn.dataset.sub === 'activities') loadActivitiesAdmin();
     if (btn.dataset.sub === 'officers') loadOfficersAdmin();
     if (btn.dataset.sub === 'bulletin') loadBulletinAdmin();
