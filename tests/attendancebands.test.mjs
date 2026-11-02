@@ -1,5 +1,6 @@
-/* The two Reports lists: brethren with no counted attendance in a chosen
-   month range, and the dues entries that fall in the same range.
+/* The two Reports lists: active brethren banded by how many meetings
+   counted for them in a chosen month range - none, one, two, and so on -
+   and the dues entries that fall in the same range.
 
    Both are pulled out of index.html itself rather than copied, so a change
    to the shipped page is a change to what this tests. The dues date reader
@@ -34,13 +35,13 @@ const INACTIVE_RE = /suspend|expel|decease|dropped|demit/i;
 assert.ok(js.includes("const ATT_COUNTED = new Set(['C', 'NO', 'NC']);"), 'ATT_COUNTED moved');
 assert.ok(js.includes('const INACTIVE_RE = /suspend|expel|decease|dropped|demit/i;'), 'INACTIVE_RE moved');
 
-const src = ['function monthKey', 'function marksInRange', 'function zeroAttendance',
-             'function duesInRange'].map(grab).join('\n');
+const src = ['function monthKey', 'function marksInRange', 'function attendanceRanked',
+             'function duesInRange', 'function duesAhead'].map(grab).join('\n');
 
 let RANGE = { from: '', to: '' };
 let ROSTER = [];
 const build = () => new Function('MONTH_INDEX', 'ATT_COUNTED', 'INACTIVE_RE', 'range', 'fullRoster',
-  src + '; return { monthKey, marksInRange, zeroAttendance, duesInRange };'
+  src + '; return { monthKey, marksInRange, attendanceRanked, duesInRange, duesAhead };'
 )(MONTH_INDEX, ATT_COUNTED, INACTIVE_RE, () => RANGE, ROSTER);
 
 const month = (label, value) => ({ month: label, value });
@@ -64,7 +65,10 @@ ROSTER = [
 ];
 const mod = build();
 
-const names = () => mod.zeroAttendance().map(r => r.m.fullName);
+// The band each brother falls in, and the names in the "none at all" band.
+const ranked = () => mod.attendanceRanked();
+const names = () => ranked().filter(r => r.band === '0').map(r => r.m.fullName);
+const bandOf = name => (ranked().find(r => r.m.fullName === name) || {}).band;
 
 // --- January to October 2026, the range the Secretary asked for ---
 RANGE = { from: '2026-01', to: '2026-10' };
@@ -81,11 +85,28 @@ assert.ok(!names().includes('Estrada') && !names().includes('Flores'),
 
 // The marks a brother does have are kept, so NP-all-year reads differently
 // from nothing-recorded-at-all.
-const rows = mod.zeroAttendance();
+const rows = ranked().filter(r => r.band === '0');
 const bravo = rows.find(r => r.m.fullName === 'Bravo');
 const cruz  = rows.find(r => r.m.fullName === 'Cruz');
 assert.strictEqual(bravo.marks.length, 2, 'Bravo’s two NP marks must survive');
 assert.strictEqual(cruz.marks.length, 0, 'Cruz has nothing recorded');
+
+// --- the bands: 0, 1, 2 ... and 6 or more sharing the last one ---
+assert.strictEqual(bandOf('Abad'), '1', 'one counted mark is band 1');
+assert.strictEqual(bandOf('Dizon'), '2', 'NO and NC are two marks, not none');
+assert.strictEqual(bandOf('Cruz'), '0');
+assert.strictEqual(bandOf('Estrada'), undefined, 'inactive brethren are not ranked at all');
+// Fewest first, so the band list reads from the brethren who need chasing.
+const counts = ranked().map(r => r.counted.length);
+assert.deepStrictEqual(counts, [...counts].sort((a, b) => a - b), 'ranked fewest first');
+// Six and above share the last band.
+ROSTER.push({ memberId:'M9', fullName:'Ilagan', status:'Regular', months:
+  ['Jan','Feb','Mar','Apr','May','Jun','Jul'].map(mo => month(mo + ' 2026', 'C')) });
+assert.strictEqual(bandOf('Ilagan'), '6+', 'seven meetings falls in the 6-or-more band');
+assert.strictEqual(ranked().find(r => r.m.fullName === 'Ilagan').counted.length, 7,
+  'the band is shared but the true count is kept');
+ROSTER.pop();
+console.log('bands:', ranked().map(r => r.m.fullName + '=' + r.band).join(' '));
 
 // --- the range genuinely moves the answer ---
 RANGE = { from: '2026-03', to: '2026-03' };
@@ -107,7 +128,14 @@ assert.ok(!d({ paidOn: '2026-11-02', year: 2026 }),
   'the day recorded wins over the dues year it paid for');
 assert.ok(!d({ paidOn: '2025-12-31', year: 2026 }), 'a day before the range is out');
 assert.ok(d({ paidOn: '', year: 2026 }), 'a bare year inside the range is in');
-assert.ok(!d({ paidOn: '', year: 2025 }), 'a bare year outside the range is out');
+assert.ok(!d({ paidOn: '', year: 2025 }), 'a bare year before the range is out');
+// Money already in hand for a year not yet reached. Dropping these is how
+// three payments for 2027 went missing from a January-to-October list.
+assert.ok(d({ paidOn: '', year: 2027 }), 'a year paid ahead must not vanish');
+assert.ok(mod.duesAhead({ paidOn: '', year: 2027 }), 'and it must be marked as paid ahead');
+assert.ok(!mod.duesAhead({ paidOn: '', year: 2026 }), 'the range\u2019s own year is not ahead');
+assert.ok(!mod.duesAhead({ paidOn: '2026-10-30', year: 2027 }),
+  'a dated payment is placed by its day, never marked ahead');
 assert.ok(!d({ paidOn: '', year: 0 }), 'undatable rows stay out of a chosen range');
 RANGE = { from: '', to: '' };
 assert.ok(d({ paidOn: '', year: 0 }), 'undatable rows show when no range is asked for');
@@ -121,4 +149,4 @@ assert.strictEqual(api.duesPaidOn_('OR 1234'), '');
 assert.strictEqual(api.duesPaidOn_(''), '');
 assert.strictEqual(api.duesPaidOn_(null), '');
 
-console.log('PASS  zero-attendance and dues range filters');
+console.log('PASS  attendance bands and dues range filters');

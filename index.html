@@ -494,6 +494,14 @@
   .btn[disabled]{ opacity:.5; cursor:not-allowed; transform:none; filter:none }
   .btn[disabled]:hover::before{ transform:translateX(-130%) }
   .btn-sm{ padding:7px 13px; font-size:13px }
+  /* A band button that is the one currently shown, marked the same way the
+     clickable stat cards are. */
+  .btn[aria-pressed="true"]{
+    border-color:var(--gold-600,#c9a227);
+    box-shadow:var(--shadow-sm), var(--bevel), 0 0 0 1px var(--gold-600,#c9a227) inset;
+  }
+  .btn[aria-pressed="true"] .tally{ color:#fff }
+  .btn .tally{ opacity:.78; font-weight:500; margin-left:5px }
   .btn-danger{ background:linear-gradient(180deg, #c0453c, #9c332b); border-color:#7d2a23 }
   .btn-danger:hover{ box-shadow:var(--shadow-md), var(--bevel), 0 0 28px -10px rgba(192,69,60,.8) }
 
@@ -1831,17 +1839,18 @@
         </div>
         <p class="hint" id="rep-range-note" role="status" aria-live="polite" style="margin-top:10px">&nbsp;</p>
 
-        <h3 style="margin:26px 0 2px;font-size:17px">Not once at Lodge</h3>
-        <p class="hint" style="margin-top:0">Every active brother with no attendance counted in the
-           months chosen above. <strong>C</strong>, <strong>NO</strong> and <strong>NC</strong>
-           count; <strong>NP</strong> and a blank do not &mdash; so whatever marks he does have are
-           shown beside him, because a brother marked NP all year and a brother with nothing
-           recorded at all are not the same case.</p>
+        <h3 style="margin:26px 0 2px;font-size:17px">Attendance in these months</h3>
+        <p class="hint" style="margin-top:0">Every active brother, grouped by how many meetings
+           counted for him. <strong>C</strong>, <strong>NO</strong> and <strong>NC</strong> count;
+           <strong>NP</strong> and a blank do not &mdash; so whatever marks he does have are shown
+           beside him, because a brother marked NP all year and a brother with nothing recorded at
+           all are not the same case. Six is the number that qualifies him to vote.</p>
+        <div class="search-row" id="rep-bands" style="margin-top:12px;flex-wrap:wrap"></div>
         <p class="hint" id="rep-zero-count" role="status" aria-live="polite"></p>
         <div class="table-wrap" style="max-height:420px">
           <table id="rep-zero-table">
             <thead><tr><th>Brother</th><th>Standing</th><th>Raised</th><th>Arrears</th>
-              <th>Marks in these months</th></tr></thead>
+              <th>Attended</th><th>Marks in these months</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -4914,13 +4923,19 @@ let loadReportsTab = () => {};
   }
 
   /* --------------------------------------------------------------------
-     NOT ONCE AT LODGE
+     ATTENDANCE IN THESE MONTHS
 
-     The marks a brother has inside the chosen months, and whether any of
-     them counted. Inactive brethren are left out: a deceased or suspended
-     brother has not failed to attend, and a list that names him is a list
-     nobody trusts.
+     Every active brother, ranked by how many meetings counted for him
+     inside the chosen range, and grouped into bands: none, one, two, and
+     so on, with six or more - the number that qualifies him to vote - as
+     the last band.
+
+     Inactive brethren are left out: a deceased or suspended brother has
+     not failed to attend, and a list that names him is a list nobody
+     trusts.
      -------------------------------------------------------------------- */
+  const REP_BANDS = ['0', '1', '2', '3', '4', '5', '6+', 'any'];
+  let repBand = '0';
   function marksInRange(m) {
     const { from, to } = range();
     return (m.months || []).filter(mo => {
@@ -4932,17 +4947,25 @@ let loadReportsTab = () => {};
     });
   }
 
-  function zeroAttendance() {
+  /* Every active brother with his count, fewest first. Six and above share
+     the last band: past six the question "is he qualified to vote" is
+     already answered, and a dozen bands with one name each is not a list
+     anybody reads. */
+  function attendanceRanked() {
     return fullRoster
       .filter(m => !INACTIVE_RE.test(String(m.status || '')))
       .map(m => {
         const marks = marksInRange(m);
         const counted = marks.filter(mo =>
           ATT_COUNTED.has(String(mo.value || mo.code || '').trim().toUpperCase()));
-        return { m, marks, counted };
+        return { m, marks, counted, band: counted.length >= 6 ? '6+' : String(counted.length) };
       })
-      .filter(r => r.counted.length === 0)
-      .sort((a, b) => String(a.m.fullName).localeCompare(String(b.m.fullName)));
+      .sort((a, b) => a.counted.length - b.counted.length ||
+                      String(a.m.fullName).localeCompare(String(b.m.fullName)));
+  }
+
+  function bandRows() {
+    return attendanceRanked().filter(r => repBand === 'any' || r.band === repBand);
   }
 
   const markWords = marks => marks
@@ -4950,24 +4973,54 @@ let loadReportsTab = () => {};
                ' ' + (mo.month || mo.label || ''))
     .join(', ');
 
+  const bandLabel = b => b === 'any' ? 'Everyone' : b === '6+' ? '6 or more' : b;
+
+  const bandSentence = n => n === 0 ? 'attended no meeting'
+    : n === 1 ? 'attended once'
+    : 'attended ' + n + ' times';
+
+  function renderBands() {
+    const all = attendanceRanked();
+    const tally = {};
+    REP_BANDS.forEach(b => { tally[b] = 0; });
+    all.forEach(r => { tally[r.band]++; });
+    tally.any = all.length;
+    document.getElementById('rep-bands').innerHTML = REP_BANDS.map(b =>
+      '<button class="btn btn-sm" type="button" data-band="' + b + '"' +
+      ' aria-pressed="' + (b === repBand) + '">' + esc(bandLabel(b)) +
+      '<span class="tally">' + tally[b] + '</span></button>').join('');
+  }
+
   function renderZeroList() {
-    const rows = zeroAttendance();
-    const active = fullRoster.filter(m => !INACTIVE_RE.test(String(m.status || ''))).length;
+    renderBands();
+    const rows = bandRows();
+    const active = attendanceRanked().length;
     document.getElementById('rep-zero-count').textContent = !fullRoster.length
       ? 'The roster has not loaded yet.'
-      : rows.length + ' of ' + active + ' active brethren were not once at Lodge '
-        + spanWords() + '.';
+      : rows.length + ' of ' + active + ' active brethren '
+        + (repBand === 'any' ? 'on the roll'
+           : repBand === '6+' ? 'attended six times or more'
+           : bandSentence(Number(repBand)))
+        + ' ' + spanWords() + '.';
     document.querySelector('#rep-zero-table tbody').innerHTML = rows.map(r =>
       '<tr><td><span class="roster-name">' + avatarHtml(r.m, 'avatar-sm') +
         '<span>' + esc(r.m.fullName) + '</span></span></td>' +
       '<td>' + esc(r.m.status || '\u2014') + '</td>' +
       '<td>' + esc(String(r.m.yearRaised || '\u2014')) + '</td>' +
       '<td>' + money(r.m.arrears) + '</td>' +
+      '<td class="att-total">' + r.counted.length + '</td>' +
       '<td class="hint">' + esc(markWords(r.marks) || 'nothing recorded') + '</td></tr>'
-    ).join('') || '<tr><td colspan="5" class="hint">' + (fullRoster.length
-      ? 'Every active brother was at Lodge at least once in these months.'
+    ).join('') || '<tr><td colspan="6" class="hint">' + (fullRoster.length
+      ? 'No active brother falls in this band ' + esc(spanWords()) + '.'
       : 'Nothing to show yet.') + '</td></tr>';
   }
+
+  document.getElementById('rep-bands').addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-band]');
+    if (!btn) return;
+    repBand = btn.dataset.band;
+    renderZeroList();
+  });
 
   /* --------------------------------------------------------------------
      DUES PAID
@@ -4978,6 +5031,12 @@ let loadReportsTab = () => {};
      year. The count says how many of each, because "2026" and
      "3 October 2026" are not the same evidence and the Secretary should
      not have to guess which he is looking at.
+
+     A dues year LATER than the range is money the Lodge is already holding
+     for a year it has not reached. Matching that on the year alone drops
+     it, which is how three payments for 2027 went missing from a January
+     to October list while sitting in the book in plain sight. Those are
+     kept and marked instead.
      -------------------------------------------------------------------- */
   let duesBook = null;          // null until the book has been read
 
@@ -4994,8 +5053,16 @@ let loadReportsTab = () => {};
     // only when no range is asked for rather than being quietly dropped.
     if (!y) return !from && !to;
     if (from && y < Number(from.slice(0, 4))) return false;
-    if (to && y > Number(to.slice(0, 4))) return false;
+    // No upper test. A later dues year is a year paid ahead, not a payment
+    // that has not happened; duesAhead marks it so the two never look alike.
     return true;
+  }
+
+  function duesAhead(d) {
+    if (d.paidOn) return false;
+    const to = range().to;
+    const y = Number(d.year) || 0;
+    return !!(y && to && y > Number(to.slice(0, 4)));
   }
 
   function duesRows() {
@@ -5020,14 +5087,17 @@ let loadReportsTab = () => {};
     }
     const rows = duesRows();
     const byDate = rows.filter(d => d.paidOn).length;
+    const ahead = rows.filter(duesAhead).length;
     const paid = rows.filter(d => String(d.status).toLowerCase() === 'paid');
     const total = paid.reduce((n, d) => n + (Number(d.amount) || 0), 0);
     count.textContent = rows.length + ' entr' + (rows.length === 1 ? 'y' : 'ies') + ' '
       + spanWords() + ' \u2014 ' + byDate + ' matched on the day recorded, '
-      + (rows.length - byDate) + ' on the dues year alone. '
+      + (rows.length - byDate) + ' on the dues year alone'
+      + (ahead ? ', of which ' + ahead + ' paid ahead for a later year' : '') + '. '
       + paid.length + ' marked Paid, ' + money(total) + ' in all.';
     tbody.innerHTML = rows.map(d =>
-      '<tr><td>' + esc(d.paidOn || '\u2014') + '</td>' +
+      '<tr><td>' + (d.paidOn ? esc(d.paidOn)
+        : '<span class="hint">' + (duesAhead(d) ? 'paid ahead' : 'year only') + '</span>') + '</td>' +
       '<td>' + esc(d.fullName) + '</td>' +
       '<td>' + esc(String(d.year || '\u2014')) + '</td>' +
       '<td>' + money(d.amount) + '</td>' +
@@ -5070,12 +5140,15 @@ let loadReportsTab = () => {};
     'Good standing', 'Qualified to vote', 'Arrears', 'Attendance this term', 'LML'];
   const ARREARS_HEADER = ['Member ID', 'Full name', 'Status', 'Arrears', 'Good standing'];
   const ZERO_HEADER = ['Member ID', 'Full name', 'Status', 'Year raised', 'Arrears',
-    'Marks in range'];
+    'Times attended', 'Marks in range'];
   const DUES_HEADER = ['Due ID', 'Member ID', 'Full name', 'Dues year', 'Amount', 'Status',
     'Day recorded', 'Note'];
 
-  const zeroExportRows = () => zeroAttendance().map(r => [r.m.memberId, r.m.fullName, r.m.status,
-    r.m.yearRaised, Number(r.m.arrears) || 0, markWords(r.marks)]);
+  /* The button on screen exports the band on screen; the workbook carries
+     every active brother with his count, because a file is read away from
+     the page that filtered it. */
+  const bandExportRows = rows => rows.map(r => [r.m.memberId, r.m.fullName, r.m.status,
+    r.m.yearRaised, Number(r.m.arrears) || 0, r.counted.length, markWords(r.marks)]);
 
   const duesExportRows = () => duesRows().map(d => [d.dueId, d.memberId, d.fullName, d.year,
     Number(d.amount) || 0, d.status, d.paidOn || '', d.note || '']);
@@ -5101,7 +5174,9 @@ let loadReportsTab = () => {};
     'nmt42-arrears-' + stamp() + '.csv', ARREARS_HEADER, arrearsRows()));
 
   document.getElementById('rep-zero-csv').addEventListener('click', () => downloadCsv(
-    'nmt42-no-attendance-' + stamp() + '.csv', ZERO_HEADER, zeroExportRows()));
+    'nmt42-attendance-' + (repBand === 'any' ? 'all' : repBand === '6+' ? '6-or-more'
+      : repBand + '-times') + '-' + stamp() + '.csv',
+    ZERO_HEADER, bandExportRows(bandRows())));
 
   document.getElementById('rep-dues-csv').addEventListener('click', () => {
     if (duesBook === null) { toast('Read the payment book first.', 'bad'); return; }
@@ -5115,7 +5190,8 @@ let loadReportsTab = () => {};
       { name: 'Roster', header: ROSTER_HEADER, rows: rosterRows() },
       { name: 'Attendance', header: ATT_HEADER, rows: attendanceRows() },
       { name: 'Arrears', header: ARREARS_HEADER, rows: arrearsRows() },
-      { name: 'Not once at Lodge', header: ZERO_HEADER, rows: zeroExportRows() },
+      { name: 'Attendance count', header: ZERO_HEADER,
+        rows: bandExportRows(attendanceRanked()) },
       { name: 'Dues paid', header: DUES_HEADER, rows: duesExportRows() },
       { name: 'About', header: ['Field', 'Value'], rows: [
         ['Lodge', 'Noli Me Tangere Lodge No. 42, F. & A. M.'],
@@ -5123,7 +5199,7 @@ let loadReportsTab = () => {};
         ['Attendance range', span],
         ['Members', fullRoster.length],
         ['Attendance records', attendanceRows().length],
-        ['Not once at Lodge', zeroAttendance().length],
+        ['Not once at Lodge', attendanceRanked().filter(r => r.band === '0').length],
         ['Dues entries', duesBook === null ? 'payment book not read' : duesRows().length],
         ['Note', 'Contains member names and standing. Treat it as the Lodge book.']
       ] }
