@@ -13,7 +13,7 @@ process.env.UPSTASH_REDIS_REST_TOKEN = 'tok';
 process.env.APPS_SCRIPT_URL = 'https://script.example/exec';
 process.env.LODGE_ADMIN_KEY = 'the-lodge-key';
 
-const ROLL = ['Juan P. Abad', 'Gregory Ong', 'Hero L. Tolosa'];
+const ROLL = ['Juan P. Abril', 'Gaspar Osorio', 'Honorio L. Trinidad'];
 const store = new Map();
 let upstreamCalls = [];
 let upstreamOk = true;
@@ -73,7 +73,7 @@ const get = async k => {
 const pendingOf = async role => (await post({ pending: true }, role)).body;
 
 // ---- a submission is accepted, and published to nobody ------------------
-let r = await post({ submit: true, fullName: 'Juan P. Abad', image: dataUrl('jpeg', jpeg) });
+let r = await post({ submit: true, fullName: 'Juan P. Abril', image: dataUrl('jpeg', jpeg) });
 assert.strictEqual(r.statusCode, 200, 'a brother on the roll may submit');
 assert.strictEqual(r.body.received, true);
 assert.strictEqual(upstreamCalls.length, 0, 'NOTHING may be written to the sheet on submission');
@@ -84,11 +84,11 @@ for (const [label, buf, why] of [
   ['jpeg', notAnImage, 'a script dressed as a jpeg'],
   ['png',  jpeg,       'a jpeg labelled as a png is still not a png'],
 ]) {
-  const bad = await post({ submit: true, fullName: 'Gregory Ong', image: dataUrl(label, buf) });
+  const bad = await post({ submit: true, fullName: 'Gaspar Osorio', image: dataUrl(label, buf) });
   if (why.startsWith('a jpeg labelled')) {
     // sniffing wins: it is stored as what it really is, never as claimed
     assert.strictEqual(bad.body.received, true);
-    const kept = JSON.parse(store.get('nmt:photoreqs'))[normalise('Gregory Ong')];
+    const kept = JSON.parse(store.get('nmt:photoreqs'))[normalise('Gaspar Osorio')];
     assert.strictEqual(kept.type, 'image/jpeg', 'the stored type must be the real one');
   } else {
     assert.strictEqual(bad.statusCode, 400, why);
@@ -99,11 +99,11 @@ console.log('PASS  the type is taken from the first bytes, not the label');
 
 // ---- sizes ---------------------------------------------------------------
 const huge = Buffer.concat([Buffer.from([0xFF, 0xD8, 0xFF, 0xE0]), Buffer.alloc(500 * 1024, 1)]);
-r = await post({ submit: true, fullName: 'Juan P. Abad', image: dataUrl('jpeg', huge) });
+r = await post({ submit: true, fullName: 'Juan P. Abril', image: dataUrl('jpeg', huge) });
 assert.strictEqual(r.statusCode, 413, 'an oversized file is refused');
-r = await post({ submit: true, fullName: 'Juan P. Abad', image: dataUrl('jpeg', Buffer.from([0xFF, 0xD8, 0xFF])) });
+r = await post({ submit: true, fullName: 'Juan P. Abril', image: dataUrl('jpeg', Buffer.from([0xFF, 0xD8, 0xFF])) });
 assert.strictEqual(r.statusCode, 400, 'a file too small to be a photograph is refused');
-r = await post({ submit: true, fullName: 'Juan P. Abad', image: 'https://example.org/me.jpg' });
+r = await post({ submit: true, fullName: 'Juan P. Abril', image: 'https://example.org/me.jpg' });
 assert.strictEqual(r.statusCode, 400, 'a link is not an upload');
 console.log('PASS  oversized, undersized and non-image submissions are refused');
 
@@ -117,12 +117,12 @@ console.log('PASS  a name that is not on the roll records nothing');
 
 // ---- replacing his own pending picture drops the old one ----------------
 let reqs = JSON.parse(store.get('nmt:photoreqs'));
-const firstPhoto = reqs[normalise('Juan P. Abad')].photo;
-await post({ submit: true, fullName: 'juan p. abad', image: dataUrl('png', png) });
+const firstPhoto = reqs[normalise('Juan P. Abril')].photo;
+await post({ submit: true, fullName: 'juan p. abril', image: dataUrl('png', png) });
 reqs = JSON.parse(store.get('nmt:photoreqs'));
-assert.strictEqual(Object.keys(reqs).filter(k => k === normalise('Juan P. Abad')).length, 1,
+assert.strictEqual(Object.keys(reqs).filter(k => k === normalise('Juan P. Abril')).length, 1,
   'he still has exactly one request');
-assert.notStrictEqual(reqs[normalise('Juan P. Abad')].photo, firstPhoto, 'it is the new picture');
+assert.notStrictEqual(reqs[normalise('Juan P. Abril')].photo, firstPhoto, 'it is the new picture');
 assert.strictEqual(store.get('nmt:img:' + firstPhoto), undefined, 'and the old one is gone from the store');
 console.log('PASS  a second submission replaces the first and discards it');
 
@@ -138,7 +138,7 @@ console.log('PASS  only the chairs that may change records can see the queue');
 
 // ---- approving writes the sheet, then clears the request ----------------
 upstreamCalls = [];
-r = await post({ approve: 'Juan P. Abad', memberId: 'M-0042' }, 'secretary');
+r = await post({ approve: 'Juan P. Abril', memberId: 'M-0042' }, 'secretary');
 assert.strictEqual(r.statusCode, 200);
 assert.strictEqual(upstreamCalls.length, 1, 'the sheet is written exactly once');
 assert.strictEqual(upstreamCalls[0].action, 'updateMember');
@@ -159,7 +159,7 @@ assert.ok(/^https:\/\/nmt-lodge-42\.vercel\.app\/api\/photo\?k=[0-9a-f]{24}$/.te
   'the portrait address is this site and an opaque key');
 assert.ok(!sentUrl.includes('M-0042'),
   'a member id must never appear in a public portrait address');
-assert.strictEqual(JSON.parse(store.get('nmt:photoreqs'))[normalise('Juan P. Abad')], undefined,
+assert.strictEqual(JSON.parse(store.get('nmt:photoreqs'))[normalise('Juan P. Abril')], undefined,
   'the request is cleared once the sheet has it');
 console.log('PASS  approving writes the sheet once, with an opaque address, then clears the request');
 
@@ -175,24 +175,24 @@ assert.strictEqual((await get('0'.repeat(24))).statusCode, 404, 'an unknown key 
 console.log('PASS  an approved portrait is served from its key, and nothing else is');
 
 // ---- a failed sheet write leaves the request to try again ---------------
-await post({ submit: true, fullName: 'Hero L. Tolosa', image: dataUrl('jpeg', jpeg) });
+await post({ submit: true, fullName: 'Honorio L. Trinidad', image: dataUrl('jpeg', jpeg) });
 upstreamOk = false;
 upstreamCalls = [];
-r = await post({ approve: 'Hero L. Tolosa', memberId: 'M-0001' }, 'wm');
+r = await post({ approve: 'Honorio L. Trinidad', memberId: 'M-0001' }, 'wm');
 assert.strictEqual(r.statusCode, 502, 'the failure is reported');
-assert.ok(JSON.parse(store.get('nmt:photoreqs'))[normalise('Hero L. Tolosa')],
+assert.ok(JSON.parse(store.get('nmt:photoreqs'))[normalise('Honorio L. Trinidad')],
   'the request survives a failed write, so it can be approved again');
 upstreamOk = true;
 console.log('PASS  a failed sheet write loses nothing and can be retried');
 
 // ---- rejecting removes the request and the picture ----------------------
 reqs = JSON.parse(store.get('nmt:photoreqs'));
-const rejectedPhoto = reqs[normalise('Hero L. Tolosa')].photo;
-assert.strictEqual((await post({ reject: 'Hero L. Tolosa' }, 'tyler')).statusCode, 403,
+const rejectedPhoto = reqs[normalise('Honorio L. Trinidad')].photo;
+assert.strictEqual((await post({ reject: 'Honorio L. Trinidad' }, 'tyler')).statusCode, 403,
   'a view-only chair cannot reject either');
-r = await post({ reject: 'hero l. tolosa' }, 'secretary');
+r = await post({ reject: 'honorio l. trinidad' }, 'secretary');
 assert.strictEqual(r.statusCode, 200);
-assert.strictEqual(JSON.parse(store.get('nmt:photoreqs'))[normalise('Hero L. Tolosa')], undefined);
+assert.strictEqual(JSON.parse(store.get('nmt:photoreqs'))[normalise('Honorio L. Trinidad')], undefined);
 assert.strictEqual(store.get('nmt:img:' + rejectedPhoto), undefined, 'the picture itself is deleted');
 assert.strictEqual((await get(rejectedPhoto)).statusCode, 404, 'and can no longer be served');
 assert.strictEqual((await post({ reject: 'Nobody At All' }, 'secretary')).statusCode, 404);

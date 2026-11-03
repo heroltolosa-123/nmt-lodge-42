@@ -12,7 +12,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const src = appsScriptSource();
 
 // Members: A id ... L arrears(12).  Dues: A id, B memberId ... H raw(8)
-const members = [['MemberID'], ['M001', 'Abad', 'Mel Deo', '', 'Mel Deo Abad', 2010, 'Regular', '', 6, 'Y', 'Y', 12400]];
+const members = [['MemberID'], ['M001', 'Abril', 'Melchor', '', 'Melchor Abril', 2010, 'Regular', '', 6, 'Y', 'Y', 12400]];
 const dues = [['DueID', 'MemberID', 'FullName', 'Year', 'Amount', 'Status', 'Note', 'Raw']];
 
 const sheet = rows => ({

@@ -46,9 +46,9 @@ function run(rows, meetingMonth, entries) {
 
 const SEP = new Date(Date.UTC(2026, 8, 1));
 const base = () => [
-  ['A-001', 'M-1', 'Juan Abad',    new Date(SEP), 'C',  ''],
-  ['A-002', 'M-2', 'Gregory Ong',  new Date(SEP), 'NC', ''],
-  ['A-003', 'M-3', 'Hero Tolosa',  new Date(Date.UTC(2026, 7, 1)), 'C', '']   // August, must not be touched
+  ['A-001', 'M-1', 'Juan Abril',    new Date(SEP), 'C',  ''],
+  ['A-002', 'M-2', 'Gaspar Osorio',  new Date(SEP), 'NC', ''],
+  ['A-003', 'M-3', 'Honorio Trinidad',  new Date(Date.UTC(2026, 7, 1)), 'C', '']   // August, must not be touched
 ];
 
 // ---- an empty code clears that month's mark ------------------------------

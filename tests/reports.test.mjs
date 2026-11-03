@@ -71,9 +71,9 @@ assert.ok(mod.safeSheetName('x'.repeat(60), new Set()).length <= 31);
 // --- a workbook shaped like the real export ---
 const bytes = mod.buildXlsx([
   { name:'Roster', header:['Member ID','Full name','Arrears'],
-    rows:[['M001','Mel Deo H Abad',12400],['M002','=cmd|evil',0],['M003','Ñoño <&> "quoted"',0]] },
+    rows:[['M001','Melchor H Abril',12400],['M002','=cmd|evil',0],['M003','Ñoño <&> "quoted"',0]] },
   { name:'Attendance', header:['Member ID','Full name','Month','Sortable month','Code'],
-    rows:[['M001','Mel Deo H Abad','Mar 2026','2026-03','C']] },
+    rows:[['M001','Melchor H Abril','Mar 2026','2026-03','C']] },
   { name:'Arrears', header:['Member ID','Arrears'], rows:[['M001',12400]] },
   { name:'About', header:['Field','Value'], rows:[['Lodge','Noli Me Tangere Lodge No. 42, F. & A. M.']] }
 ]);

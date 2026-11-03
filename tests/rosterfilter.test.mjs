@@ -22,11 +22,11 @@ new Function('ctx', grab('rosterAttention') + '\n' + grab('rosterMatches') + '\n
 const { rosterMatches, rosterMoney, rosterAttention } = ctx;
 
 const ROLL = [
-  { fullName: 'Arnel D Cantos',       status: 'Regular',   lml: 'Y', goodStanding: 'Y', qualifiedToVote: 'Y', arrears: 0 },
-  { fullName: 'Andrew Omel',          status: 'Regular',   lml: 'N', goodStanding: 'N', qualifiedToVote: 'N', arrears: 6200 },
-  { fullName: 'Domingo B Sumayo, Jr', status: 'Regular',   lml: 'N', goodStanding: 'Y', qualifiedToVote: 'N', arrears: -6200 },
-  { fullName: 'Bernandino L Cabiles', status: 'Suspended', lml: 'N', goodStanding: 'N', qualifiedToVote: 'N', arrears: 0 },
-  { fullName: 'Gary U Lim',           status: 'Regular',   lml: 'Y', goodStanding: 'Y', qualifiedToVote: 'N', arrears: 0 }
+  { fullName: 'Anselmo D Carandang',       status: 'Regular',   lml: 'Y', goodStanding: 'Y', qualifiedToVote: 'Y', arrears: 0 },
+  { fullName: 'Ambrosio Onofre',          status: 'Regular',   lml: 'N', goodStanding: 'N', qualifiedToVote: 'N', arrears: 6200 },
+  { fullName: 'Dionisio B Salonga, Jr', status: 'Regular',   lml: 'N', goodStanding: 'Y', qualifiedToVote: 'N', arrears: -6200 },
+  { fullName: 'Benigno L Catbagan', status: 'Suspended', lml: 'N', goodStanding: 'N', qualifiedToVote: 'N', arrears: 0 },
+  { fullName: 'Gavino U Linsangan',           status: 'Regular',   lml: 'Y', goodStanding: 'Y', qualifiedToVote: 'N', arrears: 0 }
 ];
 const F = (o) => Object.assign({ search:'', status:'', goodStanding:'', vote:'', money:'', lml:'' }, o);
 const names = f => ROLL.filter(m => rosterMatches(m, F(f))).map(m => m.fullName);
@@ -37,28 +37,28 @@ console.log('PASS  with nothing set, the whole roll is shown');
 
 // ---- the three figures on the cards --------------------------------------
 assert.deepStrictEqual(names({ goodStanding: 'Y' }),
-  ['Arnel D Cantos', 'Domingo B Sumayo, Jr', 'Gary U Lim']);
-assert.deepStrictEqual(names({ vote: 'Y' }), ['Arnel D Cantos']);
-assert.deepStrictEqual(names({ money: 'owing' }), ['Andrew Omel'],
+  ['Anselmo D Carandang', 'Dionisio B Salonga, Jr', 'Gavino U Linsangan']);
+assert.deepStrictEqual(names({ vote: 'Y' }), ['Anselmo D Carandang']);
+assert.deepStrictEqual(names({ money: 'owing' }), ['Ambrosio Onofre'],
   'owed to the Lodge means arrears above nil, and nothing else');
 console.log('PASS  good standing, qualified to vote and owing each give the right brethren');
 
 // ---- THE ONE THAT MATTERS: paid ahead is its own thing -------------------
-assert.deepStrictEqual(names({ money: 'ahead' }), ['Domingo B Sumayo, Jr'],
+assert.deepStrictEqual(names({ money: 'ahead' }), ['Dionisio B Salonga, Jr'],
   'a credit is "paid ahead"');
-assert.ok(!names({ money: 'owing' }).includes('Domingo B Sumayo, Jr'),
+assert.ok(!names({ money: 'owing' }).includes('Dionisio B Salonga, Jr'),
   'a man who paid early must never appear among those who owe');
-assert.ok(!names({ money: 'clear' }).includes('Domingo B Sumayo, Jr'),
+assert.ok(!names({ money: 'clear' }).includes('Dionisio B Salonga, Jr'),
   'nor among those who are merely square — he is ahead of them');
 assert.deepStrictEqual(names({ money: 'clear' }),
-  ['Arnel D Cantos', 'Bernandino L Cabiles', 'Gary U Lim']);
+  ['Anselmo D Carandang', 'Benigno L Catbagan', 'Gavino U Linsangan']);
 console.log('PASS  a brother paid ahead is counted as ahead, never as owing or square');
 
 // ---- Life Membership is not a status -------------------------------------
-assert.deepStrictEqual(names({ lml: 'Y' }), ['Arnel D Cantos', 'Gary U Lim']);
-assert.deepStrictEqual(names({ status: 'Regular', lml: 'Y' }), ['Arnel D Cantos', 'Gary U Lim'],
+assert.deepStrictEqual(names({ lml: 'Y' }), ['Anselmo D Carandang', 'Gavino U Linsangan']);
+assert.deepStrictEqual(names({ status: 'Regular', lml: 'Y' }), ['Anselmo D Carandang', 'Gavino U Linsangan'],
   'a Life Member still carries his ordinary standing');
-assert.ok(names({ status: 'Suspended' }).includes('Bernandino L Cabiles'));
+assert.ok(names({ status: 'Suspended' }).includes('Benigno L Catbagan'));
 console.log('PASS  Life Membership filters apart from standing, as it is now stored');
 
 // ---- a missing flag is not a Life Member ---------------------------------
@@ -70,9 +70,9 @@ console.log('PASS  a record with no LML field is treated as not a Life Member');
 
 // ---- filters combine ------------------------------------------------------
 assert.deepStrictEqual(names({ goodStanding: 'Y', lml: 'Y', money: 'clear' }),
-  ['Arnel D Cantos', 'Gary U Lim'], 'filters narrow together, they do not replace one another');
-assert.deepStrictEqual(names({ search: 'lim' }), ['Gary U Lim']);
-assert.deepStrictEqual(names({ search: 'LIM' }), [], 'the search term arrives already lowercased');
+  ['Anselmo D Carandang', 'Gavino U Linsangan'], 'filters narrow together, they do not replace one another');
+assert.deepStrictEqual(names({ search: 'linsang' }), ['Gavino U Linsangan']);
+assert.deepStrictEqual(names({ search: 'LINSANG' }), [], 'the search term arrives already lowercased');
 console.log('PASS  filters combine, and the search is matched as given');
 
 // ---- odd arrears values must not throw ------------------------------------

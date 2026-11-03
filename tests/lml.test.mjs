@@ -55,11 +55,11 @@ function run(rows, apply, header) {
 }
 
 const ROWS = () => [
-  member('M-1', 'Arnel Cantos',  'LML'),
-  member('M-2', 'Juan Abad',     'Regular'),
-  member('M-3', 'Arturo Medrano','LML or Suspended?'),
-  member('M-4', 'Gary Lim',      'LML'),
-  member('M-5', 'Jonathan Ureta','Deceased'),
+  member('M-1', 'Anselmo Carandang',  'LML'),
+  member('M-2', 'Juan Abril',     'Regular'),
+  member('M-3', 'Alfonso Maglaya','LML or Suspended?'),
+  member('M-4', 'Gavino Linsangan',      'LML'),
+  member('M-5', 'Joaquin Urbano','Deceased'),
   member('M-6', 'Old Life',      'Regular', 'Y')      // already migrated
 ];
 
@@ -72,16 +72,16 @@ console.log('PASS  a preview reports two to move and writes nothing');
 
 // ---- applying moves exactly the exact-LML rows ---------------------------
 r = run(ROWS(), true);
-assert.strictEqual(r.sheet.grid[0][V - 1], 'Y', 'Cantos gets the flag');
+assert.strictEqual(r.sheet.grid[0][V - 1], 'Y', 'Carandang gets the flag');
 assert.strictEqual(r.sheet.grid[0][6], 'Regular', 'and his standing becomes Regular');
-assert.strictEqual(r.sheet.grid[3][V - 1], 'Y', 'Lim gets the flag');
+assert.strictEqual(r.sheet.grid[3][V - 1], 'Y', 'Linsangan gets the flag');
 assert.strictEqual(r.out.moved, 2);
 console.log('PASS  a Status of exactly LML moves to column V and leaves Regular behind');
 
 // ---- the ones it must NOT touch -----------------------------------------
-assert.strictEqual(r.sheet.grid[2][6], 'LML or Suspended?', 'Medrano is left exactly as he was');
+assert.strictEqual(r.sheet.grid[2][6], 'LML or Suspended?', 'Maglaya is left exactly as he was');
 assert.strictEqual(r.sheet.grid[2][V - 1], '', 'and no honour is invented for him');
-assert.ok(r.out.queried.some(q => /Medrano/.test(q)), 'but he is reported by name');
+assert.ok(r.out.queried.some(q => /Maglaya/.test(q)), 'but he is reported by name');
 assert.strictEqual(r.sheet.grid[1][6], 'Regular', 'an ordinary brother is untouched');
 assert.strictEqual(r.sheet.grid[1][V - 1], '', 'and gains nothing');
 assert.strictEqual(r.sheet.grid[4][6], 'Deceased', 'a deceased brother keeps his standing');

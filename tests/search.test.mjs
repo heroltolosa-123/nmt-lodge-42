@@ -4,7 +4,7 @@ import assert from 'node:assert';
 
 // stub the roster Apps Script would return — note the private fields
 const ROSTER = [
-  { memberId:'M1', surname:'Santos', firstName:'Manuel', fullName:'Manuel de Santos',
+  { memberId:'M1', surname:'Santos', firstName:'Maximo', fullName:'Maximo de Santos',
     yearRaised:1918, status:'Regular', proficiency:'MM', attendanceTotal:4,
     qualifiedToVote:'Y', goodStanding:'Y', arrears:0, lml:'N',
     months:[{month:'Mar 2025',value:'C'}], attendanceRemarks:'',
@@ -13,8 +13,8 @@ const ROSTER = [
   { memberId:'M2', surname:'Tanner', firstName:'Adam', fullName:'Adam T. Tanner',
     yearRaised:1918, status:'Regular', arrears:500, goodStanding:'N',
     months:[], dateOfBirth:'1885-02-02', email:'t@y.com' },
-  ...Array.from({length:30},(_,i)=>({ memberId:'X'+i, surname:'Cruz', firstName:'J'+i,
-    fullName:'J'+i+' Cruz', months:[], arrears:0, email:'leak'+i+'@y.com' }))
+  ...Array.from({length:30},(_,i)=>({ memberId:'X'+i, surname:'Cruzado', firstName:'J'+i,
+    fullName:'J'+i+' Cruzado', months:[], arrears:0, email:'leak'+i+'@y.com' }))
 ];
 
 globalThis.fetch = async () => ({ ok:true, json: async () => ({ roster: ROSTER }) });
@@ -37,7 +37,7 @@ console.log('PASS  terms under 3 chars return nothing');
 // 2. a real search returns matches
 const r1 = await call('santos');
 assert.strictEqual(r1.body.matches.length, 1);
-assert.strictEqual(r1.body.matches[0].fullName, 'Manuel de Santos');
+assert.strictEqual(r1.body.matches[0].fullName, 'Maximo de Santos');
 console.log('PASS  search by surname works');
 
 // 3. THE guarantee: private fields never leave
@@ -52,7 +52,7 @@ for (const m of all) for (const f of PRIVATE)
 console.log('PASS  no private field reaches the client');
 
 // 3b. the portrait must survive the whitelist, or Find My Status loses its faces
-const withPhoto = all.find(m => m.fullName === 'Manuel de Santos');
+const withPhoto = all.find(m => m.fullName === 'Maximo de Santos');
 for (const f of REQUIRED_PUBLIC)
   assert.ok(withPhoto && f in withPhoto, `${f} was stripped - Find My Status shows no photo`);
 console.log('PASS  photoUrl survives the whitelist');

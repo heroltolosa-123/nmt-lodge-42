@@ -48,16 +48,16 @@ const month = (label, value) => ({ month: label, value });
 
 ROSTER = [
   // present in March, absent the rest of the chosen months
-  { memberId:'M1', fullName:'Abad', status:'Regular', months:[month('Mar 2026','C'), month('Jun 2026','NP')] },
+  { memberId:'M1', fullName:'Abril', status:'Regular', months:[month('Mar 2026','C'), month('Jun 2026','NP')] },
   // marked NP every month: absent, and the marks say so
   { memberId:'M2', fullName:'Bravo', status:'Regular', months:[month('Jan 2026','NP'), month('Aug 2026','NP')] },
   // nothing recorded at all: also absent, a different case
-  { memberId:'M3', fullName:'Cruz', status:'Regular', months:[] },
+  { memberId:'M3', fullName:'Cruzado', status:'Regular', months:[] },
   // NO and NC count as much as C
   { memberId:'M4', fullName:'Dizon', status:'Regular', months:[month('Feb 2026','NO'), month('Sep 2026','NC')] },
   // never flagged, whatever his attendance
   { memberId:'M5', fullName:'Estrada', status:'Suspended 2025', months:[] },
-  { memberId:'M6', fullName:'Flores', status:'Deceased', months:[] },
+  { memberId:'M6', fullName:'Firmalo', status:'Deceased', months:[] },
   // attended, but outside January-October
   { memberId:'M7', fullName:'Gomez', status:'Regular', months:[month('Dec 2026','C')] },
   // a month label the sheet never wrote properly cannot place him in time
@@ -72,29 +72,29 @@ const bandOf = name => (ranked().find(r => r.m.fullName === name) || {}).band;
 
 // --- January to October 2026, the range the Secretary asked for ---
 RANGE = { from: '2026-01', to: '2026-10' };
-assert.deepStrictEqual(names(), ['Bravo', 'Cruz', 'Gomez', 'Hizon']);
+assert.deepStrictEqual(names(), ['Bravo', 'Cruzado', 'Gomez', 'Hizon']);
 console.log('Jan-Oct 2026, not once at Lodge:', names().join(', '));
 
-// Abad's single C in March is enough to keep him off the list.
-assert.ok(!names().includes('Abad'), 'one counted mark must clear a brother');
+// Abril's single C in March is enough to keep him off the list.
+assert.ok(!names().includes('Abril'), 'one counted mark must clear a brother');
 // Dizon's NO and NC count as much as a C.
 assert.ok(!names().includes('Dizon'), 'NO and NC must count');
 // A suspended or deceased brother has not failed to attend.
-assert.ok(!names().includes('Estrada') && !names().includes('Flores'),
+assert.ok(!names().includes('Estrada') && !names().includes('Firmalo'),
   'inactive brethren must never be listed');
 
 // The marks a brother does have are kept, so NP-all-year reads differently
 // from nothing-recorded-at-all.
 const rows = ranked().filter(r => r.band === '0');
 const bravo = rows.find(r => r.m.fullName === 'Bravo');
-const cruz  = rows.find(r => r.m.fullName === 'Cruz');
+const cruz  = rows.find(r => r.m.fullName === 'Cruzado');
 assert.strictEqual(bravo.marks.length, 2, 'Bravo’s two NP marks must survive');
-assert.strictEqual(cruz.marks.length, 0, 'Cruz has nothing recorded');
+assert.strictEqual(cruz.marks.length, 0, 'Cruzado has nothing recorded');
 
 // --- the bands: 0, 1, 2 ... and 6 or more sharing the last one ---
-assert.strictEqual(bandOf('Abad'), '1', 'one counted mark is band 1');
+assert.strictEqual(bandOf('Abril'), '1', 'one counted mark is band 1');
 assert.strictEqual(bandOf('Dizon'), '2', 'NO and NC are two marks, not none');
-assert.strictEqual(bandOf('Cruz'), '0');
+assert.strictEqual(bandOf('Cruzado'), '0');
 assert.strictEqual(bandOf('Estrada'), undefined, 'inactive brethren are not ranked at all');
 // Fewest first, so the band list reads from the brethren who need chasing.
 const counts = ranked().map(r => r.counted.length);
@@ -110,12 +110,12 @@ console.log('bands:', ranked().map(r => r.m.fullName + '=' + r.band).join(' '));
 
 // --- the range genuinely moves the answer ---
 RANGE = { from: '2026-03', to: '2026-03' };
-assert.ok(!names().includes('Abad') && names().includes('Dizon'),
-  'March alone: Abad was there, Dizon was not');
+assert.ok(!names().includes('Abril') && names().includes('Dizon'),
+  'March alone: Abril was there, Dizon was not');
 RANGE = { from: '2026-11', to: '2026-12' };
 assert.ok(!names().includes('Gomez'), 'December alone: Gomez was there');
 RANGE = { from: '', to: '' };
-assert.ok(!names().includes('Abad') && names().includes('Cruz'),
+assert.ok(!names().includes('Abril') && names().includes('Cruzado'),
   'no range at all means every recorded month');
 RANGE = { from: '2026-03', to: '2026-03' };
 console.log('March alone, not once at Lodge:', names().join(', '));
