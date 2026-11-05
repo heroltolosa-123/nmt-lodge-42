@@ -22,7 +22,8 @@ if (!existsSync(join(appsScriptDir(), FILE))) {
   process.exit(0);
 }
 
-const api = new Function(appsScriptSource(FILE) +
+const SRC = appsScriptSource(FILE);
+const api = new Function(SRC +
   '; return { advancePlan_, advanceReversal_, advanceCorrections_, POSTED_RE_,' +
   ' ADVANCE_STAMP_RE_, ADVANCE_DUE_IDS_, ADVANCE_CORRECT_ };')();
 const { advancePlan_: plan, advanceReversal_: reversal, advanceCorrections_: corrections,
@@ -114,35 +115,63 @@ assert.deepStrictEqual(reversal([]), []);
 assert.deepStrictEqual(IDS, ['D01862', 'D01863', 'D01864']);
 
 /* --- SETTING A BALANCE OUTRIGHT ---
-   Each of the three paid one year ahead, so each should hold 6,200 in
-   credit and no more. A balance already right is left alone rather than
-   rewritten, so the Remarks note is only ever added when something
-   actually moved. */
-/* Only the one balance the workbook confirms. The two Ongs were in this
-   table until the workbook was read: their rows stop at 2026, so whether
-   they paid 2027 at all is unsettled, and a balance nobody can confirm
-   must not be written by a script. */
-assert.deepStrictEqual(TARGETS.map(t => [t.memberId, t.shouldBe]), [['M110', -6200]]);
-assert.ok(!TARGETS.some(t => t.memberId === 'M081' || t.memberId === 'M082'),
-  'an unconfirmed balance must not be set');
+   Each of the three paid a year ahead, so each should hold that year's
+   dues in credit and no more. A balance already right is left alone
+   rather than rewritten, so the Remarks note is only ever added when
+   something actually moved.
+
+   Two of the three were out of this table while the only evidence was
+   the Secretary's workbook, whose year columns for them stop at 2026.
+   The Financial Report for October 2026 names all three by official
+   receipt number, so all three are in now — and it puts one of them at
+   the senior rate, 480 below what his Dues row says. The receipt is
+   what he handed over. */
+assert.strictEqual(TARGETS.length, 3, 'three brethren paid a year ahead');
+assert.ok(TARGETS.every(t => t.shouldBe < 0), 'each is in credit, not in debt');
+assert.deepStrictEqual(TARGETS.map(t => t.shouldBe).sort((a, b) => a - b),
+  [-6200, -6200, -5720], 'two at the full year, one at the senior rate');
+TARGETS.forEach(t => assert.ok(/OR \d{4}/.test(t.why),
+  t.memberId + ': a balance set by hand must cite the receipt that justifies it'));
+assert.strictEqual(new Set(TARGETS.map(t => t.memberId)).size, 3, 'no member listed twice');
+
+/* The expect guard is a substring of the roll's name, and it is the only
+   thing standing between an ID one digit out and a stranger's balance.
+   The names themselves are not written down here — this repository is
+   public — and they do not need to be: balanceRun_ reads the live roll
+   and refuses when the name it finds does not contain the guard. What
+   has to hold HERE is that no guard is loose enough to match another
+   target's, which is the way two brethren of one family defeat it. */
+TARGETS.forEach(t => {
+  assert.ok(t.expect && t.expect.trim().length >= 4,
+    t.memberId + ': a guard that short would match half the roll');
+  TARGETS.filter(o => o !== t).forEach(o =>
+    assert.ok(!o.expect.toLowerCase().includes(t.expect.toLowerCase()),
+      t.memberId + ': its guard is contained in ' + o.memberId + "'s, so a wrong ID " +
+      'could rewrite the wrong brother'));
+});
+assert.match(SRC, /expected a brother named/,
+  'balanceRun_ must still refuse when the roll disagrees with the guard');
 
 let c = corrections({ M110: -18600, M081: -6200, M082: -6200 }, TARGETS);
-assert.strictEqual(c.length, 1, 'only the confirmed brother is touched');
+assert.strictEqual(c.length, 3);
 assert.strictEqual(c[0].from, -18600);
 assert.strictEqual(c[0].to, -6200);
 assert.strictEqual(c[0].change, 12400, 'three years of credit back down to one');
 assert.ok(!c[0].settled);
+// the senior discount: 6,200 of credit on the books, 5,720 actually paid
+assert.strictEqual(c[1].change, 480, 'the 480 he never paid comes back off his credit');
+assert.ok(c[2].settled, 'the third is already right and is left alone');
 
 // already right: reported, not rewritten, so no Remarks note is added
-c = corrections({ M110: -6200 }, TARGETS);
-assert.ok(c[0].settled);
-assert.strictEqual(c[0].change, undefined);
+c = corrections({ M110: -6200, M081: -5720, M082: -6200 }, TARGETS);
+assert.ok(c.every(x => x.settled), 'a second run moves nothing');
+assert.ok(c.every(x => x.change === undefined));
 
 // a balance moving the other way — someone owing, set to a credit
 assert.strictEqual(corrections({ M110: 6200 }, TARGETS)[0].change, -12400);
 
 // a member who is not on the roll is reported, never invented
-assert.strictEqual(corrections({ M081: -6200 }, TARGETS)[0].skip, 'not on the roll');
+assert.strictEqual(corrections({ M081: -5720 }, TARGETS)[0].skip, 'not on the roll');
 
 // nil is a real balance, not a missing one
 assert.strictEqual(corrections({ M110: 0 }, TARGETS)[0].change, -6200);
@@ -152,5 +181,5 @@ const retired = 'Superseded on 2026-11-02; balance set by hand to -6200. Earlier
   'stamp: Posted by advance-2026 on 2026-11-02; arrears -12400 \u2192 -18600';
 assert.ok(!MINE.test(retired), 'advanceUndo must not wind back an overruled balance');
 
-console.log('PASS  posts only the named rows, reverses cleanly, and sets only the ' +
-  TARGETS.length + ' balance the workbook confirms');
+console.log('PASS  posts only the named rows, reverses cleanly, and sets the ' +
+  TARGETS.length + ' balances the October receipts confirm');

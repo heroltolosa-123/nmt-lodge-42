@@ -28,11 +28,16 @@ const { due2027Existing_: existing, DUE_2027_: TABLE,
 // --- the figures, as the workbook records them ---
 assert.strictEqual(YEAR, 2027);
 assert.strictEqual(TABLE.length, 10, 'ten brethren have a 2027 figure in the workbook');
+/* The amounts are deliberately not normalised: the annual dues are 6,200
+   and four brethren paid 5,720 at a discount. One of those four was 6,200
+   here until the October receipts were read, and a figure quietly rounded
+   to the headline rate is a figure nobody can reconcile against an OR
+   number afterwards. */
 const byAmount = TABLE.reduce((a, d) => (a[d.amount] = (a[d.amount] || 0) + 1, a), {});
-assert.deepStrictEqual(byAmount, { 6200: 7, 5720: 3 },
-  'seven paid 6,200 and three paid 5,720 — the amounts are not normalised');
-assert.strictEqual(TABLE.reduce((n, d) => n + d.amount, 0), 60560,
-  'the Lodge holds 60,560 for 2027');
+assert.deepStrictEqual(byAmount, { 6200: 6, 5720: 4 },
+  'six paid 6,200 and four paid 5,720 — the amounts are not normalised');
+assert.strictEqual(TABLE.reduce((n, d) => n + d.amount, 0), 60080,
+  'the Lodge holds 60,080 for 2027');
 TABLE.forEach(d => {
   assert.ok(d.name && d.name.trim(), 'every entry is named');
   assert.ok(d.amount > 0, d.name + ' must have an amount');
@@ -76,6 +81,6 @@ const afterRun = already.concat(firstPass.map((d, i) => ({
 assert.strictEqual(TABLE.filter(d => !existing(afterRun, idOf(d), YEAR).length).length, 0,
   'a second run must record nothing');
 
-console.log('PASS  ' + TABLE.length + ' brethren, ₱' +
+console.log('PASS  ' + TABLE.length + ' brethren, \u20b1' +
   TABLE.reduce((n, d) => n + d.amount, 0).toLocaleString() +
   ' for 2027, and no payment recorded twice');
