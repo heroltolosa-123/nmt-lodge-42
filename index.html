@@ -506,6 +506,11 @@
   .btn-danger:hover{ box-shadow:var(--shadow-md), var(--bevel), 0 0 28px -10px rgba(192,69,60,.8) }
 
   .search-row{ display:flex; gap:10px; margin-bottom:6px }
+
+  /* Every list in the dashboard can leave it as a file, and the pair of
+     buttons sits the same way on each one so it is found without looking. */
+  .export-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px }
+  .export-row:empty{ display:none }
   .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px }
   .grid-2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:20px }
   .grid-2 label.hint{ display:block; margin-bottom:6px }
@@ -1734,20 +1739,31 @@
         </div>
 
         <div id="an-forecast" style="margin-top:18px"></div>
+
+        <div class="export-row" id="an-export"></div>
       </div>
 
       <!-- ATTENDANCE — a whole lodge year at once -->
       <div class="card admin-sub" id="sub-attendance" style="display:none">
         <h2 style="margin-top:0"><svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>Attendance &amp; Arrears</h2>
-        <p class="hint">A whole lodge year on one page, March to February. Change any cell and the
-           figure beside it moves with it. <strong>C</strong>, <strong>NO</strong> and
-           <strong>NC</strong> count toward the six needed to vote; <strong>NP</strong> and a blank
-           do not. Nothing is sent until you press Save.</p>
+        <p class="hint">A lodge year on one page by default, March to February &mdash; or any span of
+           months you ask for. Change any cell and the figure beside it moves with it.
+           <strong>C</strong>, <strong>NO</strong> and <strong>NC</strong> count toward the six
+           needed to vote; <strong>NP</strong> and a blank do not. Nothing is sent until you press
+           Save.</p>
 
         <div class="rollcall-tools" style="margin-top:14px">
           <label class="rc-field">
             <span>Lodge year</span>
             <select id="att-term"></select>
+          </label>
+          <label class="rc-field">
+            <span>From month</span>
+            <input type="month" id="att-from">
+          </label>
+          <label class="rc-field">
+            <span>To month</span>
+            <input type="month" id="att-to">
           </label>
           <label class="rc-field rc-grow">
             <span>Find a brother</span>
@@ -1771,6 +1787,8 @@
           <span class="hint" id="att-dirty" style="margin-left:4px"></span>
         </div>
         <p class="hint" id="att-msg" role="status" aria-live="polite"></p>
+        <div class="export-row" id="att-export"></div>
+        <p class="hint" id="att-span-note"></p>
 
         <div class="table-wrap" style="margin-top:12px;max-height:70vh">
           <table id="att-table"><thead></thead><tbody></tbody></table>
@@ -1784,6 +1802,7 @@
            the website yet &mdash; it appears only when you approve it.</p>
         <div id="photo-queue" style="margin-top:16px"></div>
         <p class="hint" id="photo-queue-msg" role="status" aria-live="polite"></p>
+        <div class="export-row" id="photo-export"></div>
       </div>
 
       <!-- OFFICER ACCOUNTS -->
@@ -1804,6 +1823,7 @@
         </div>
 
         <p class="hint" id="accounts-msg" role="status" aria-live="polite" style="margin-top:12px"></p>
+        <div class="export-row" id="accounts-export"></div>
         <div id="accounts-link-box"></div>
 
         <details style="margin-top:20px">
@@ -2047,6 +2067,7 @@
           <span class="rc-count" id="rollcall-count"></span>
         </div>
         <div id="rollcall-msg" class="hint"></div>
+        <div class="export-row" id="rollcall-export"></div>
         <div class="table-wrap" style="margin-top:14px">
           <table id="rollcall-table">
             <thead><tr><th>Name</th><th>Status</th><th style="width:140px">Code</th></tr></thead>
@@ -2081,6 +2102,9 @@
           <button class="btn" id="dues-save-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save Payment</span></button>
         </div>
         <div id="dues-msg" class="hint"></div>
+        <p class="hint" style="margin-top:14px">This screen records one payment. The payment
+           <em>book</em> &mdash; every entry, filtered by month and exportable &mdash; is under
+           <strong>Reports</strong>.</p>
       </div>
 
       <!-- ADD MEMBER -->
@@ -2123,6 +2147,7 @@
         <div class="search-row">
           <button class="btn editors-only" id="activity-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post New Activity</span></button>
         </div>
+        <div class="export-row" id="activities-export"></div>
         <div id="activities-admin-list"></div>
       </div>
 
@@ -2157,6 +2182,7 @@
         <div class="search-row">
           <button class="btn editors-only" id="officer-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Officer</span></button>
         </div>
+        <div class="export-row" id="officers-export"></div>
         <div id="officers-admin-list"></div>
       </div>
 
@@ -2189,6 +2215,7 @@
         <div class="search-row">
           <button class="btn editors-only" id="announcement-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post Announcement</span></button>
         </div>
+        <div class="export-row" id="bulletin-export"></div>
         <div id="bulletin-admin-list"></div>
       </div>
 
@@ -5587,21 +5614,80 @@ document.getElementById('fc-reset').addEventListener('click', () => {
    script takes. An emptied cell is sent as an empty code, which the
    script reads as "take this mark off".
    --------------------------------------------------------------------- */
-const ATT_MONTH_NAMES = ['Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 let attTermStart = null;
 let attEdits = new Map();        // "memberId|YYYY-MM" -> code
 let attArrearsEdits = new Map(); // memberId -> number
+
+/* A grid is a column per month, so an unbounded span is a browser that
+   stops answering. Three years is longer than any question the Secretary
+   has actually asked and still fits on a screen you can scroll. */
+const ATT_MAX_MONTHS = 36;
+
+function attMonthCell(y, m) {
+  return { key: y + '-' + String(m).padStart(2, '0'), label: MONTH_SHORT[m - 1], year: y };
+}
 
 /* The twelve months of a lodge year, March first, as YYYY-MM. */
 function attTermMonths(start) {
   const out = [];
   for (let i = 0; i < 12; i++) {
     const m = 3 + i;
-    const year = m <= 12 ? start : start + 1;
-    const mm = m <= 12 ? m : m - 12;
-    out.push({ key: year + '-' + String(mm).padStart(2, '0'), label: ATT_MONTH_NAMES[i], year });
+    out.push(attMonthCell(m <= 12 ? start : start + 1, m <= 12 ? m : m - 12));
   }
   return out;
+}
+
+/* Every month from one to the other, inclusive, oldest first. Pure, so the
+   boundaries can be checked without a page: a range of one month must give
+   one column, and a range entered back to front is a slip rather than a
+   request for nothing. */
+function attMonthRange(from, to, cap) {
+  const lo = from || to, hi = to || from;
+  if (!lo) return [];
+  const [a, b] = lo <= hi ? [lo, hi] : [hi, lo];
+  const out = [];
+  let y = Number(a.slice(0, 4)), m = Number(a.slice(5, 7));
+  const endY = Number(b.slice(0, 4)), endM = Number(b.slice(5, 7));
+  if (!y || !m || !endY || !endM) return [];
+  while ((y < endY || (y === endY && m <= endM)) && out.length < (cap || ATT_MAX_MONTHS)) {
+    out.push(attMonthCell(y, m));
+    if (++m > 12) { m = 1; y++; }
+  }
+  return out;
+}
+
+/* The oldest and newest month the roll holds a mark for, so leaving one
+   box empty can mean "open at that end" instead of one lonely column. */
+function attRecordedBounds() {
+  let lo = null, hi = null;
+  fullRoster.forEach(m => (m.months || []).forEach(mo => {
+    const k = monthKey(mo.month);
+    if (!k) return;
+    if (lo === null || k < lo) lo = k;
+    if (hi === null || k > hi) hi = k;
+  }));
+  return { lo, hi };
+}
+
+/* What the grid is showing. A lodge year when neither month box is filled,
+   because that is the span the six-attendance rule is counted over; whatever
+   the officers ask for the moment one of them is.
+
+   When the span is too wide to draw, the end the officer actually named is
+   the one that is kept — he asked for months up to February, and handing
+   him months up to the cap instead would answer a question nobody put. */
+function attSpan() {
+  const from = document.getElementById('att-from').value || '';
+  const to   = document.getElementById('att-to').value || '';
+  if (!from && !to) {
+    return { months: attTermMonths(attTermStart), whole: true, from: '', to: '' };
+  }
+  const bounds = attRecordedBounds();
+  const full = attMonthRange(from || bounds.lo || to, to || bounds.hi || from, 1e4);
+  const months = full.length <= ATT_MAX_MONTHS ? full
+    : (from ? full.slice(0, ATT_MAX_MONTHS) : full.slice(-ATT_MAX_MONTHS));
+  return { months, whole: false, from, to, clipped: full.length > months.length };
 }
 
 /* Every lodge year the roll knows about, newest first, and always the
@@ -5651,7 +5737,7 @@ function attMoney(n) {
 function attRows() {
   const term = String(document.getElementById('att-filter').value || '').trim().toLowerCase();
   const scope = document.getElementById('att-scope').value;
-  const months = attTermMonths(attTermStart);
+  const months = attSpan().months;
   return fullRoster
     .filter(m => !term || String(m.fullName || '').toLowerCase().includes(term))
     .filter(m => {
@@ -5671,13 +5757,16 @@ function attRows() {
 
 function renderAttendanceGrid() {
   if (attTermStart === null) attTermStart = currentLodgeYearStart();
-  const months = attTermMonths(attTermStart);
+  const span = attSpan();
+  const months = span.months;
   const thead = document.querySelector('#att-table thead');
   const tbody = document.querySelector('#att-table tbody');
 
+  /* "Of 6" is a lodge-year rule. Over any other span the number is a count
+     and nothing more, so the heading stops claiming otherwise. */
   thead.innerHTML = '<tr><th>Brother</th><th>Arrears</th>' +
     months.map(mo => `<th title="${mo.label} ${mo.year}">${mo.label}<br><span class="hint" style="font-size:10px">${String(mo.year).slice(-2)}</span></th>`).join('') +
-    '<th>Of 6</th></tr>';
+    `<th>${span.whole ? 'Of 6' : 'Count'}</th></tr>`;
 
   const rows = attRows();
   tbody.innerHTML = rows.map(m => {
@@ -5695,7 +5784,7 @@ function renderAttendanceGrid() {
     }).join('');
     const arrears = attArrearsOf(m);
     const aDirty = attArrearsEdits.has(m.memberId) ? ' att-changed' : '';
-    const cls = inactive ? 'inactive' : (counted >= 6 ? 'att-ok' : 'att-short');
+    const cls = inactive ? 'inactive' : (!span.whole ? '' : counted >= 6 ? 'att-ok' : 'att-short');
     return `<tr class="${cls}">` +
       `<td><span class="roster-name">${avatarHtml(m, 'avatar-sm')}<span>${esc(m.fullName)}` +
         (inactive ? ` <span class="hint">(${esc(m.status)})</span>` : '') + '</span></span></td>' +
@@ -5703,11 +5792,38 @@ function renderAttendanceGrid() {
         ` value="${arrears}" title="${attMoney(arrears)}"></td>` +
       cells +
       `<td class="att-total">${counted}</td></tr>`;
-  }).join('') || '<tr><td colspan="15" class="hint">No brother matches.</td></tr>';
+  }).join('') || `<tr><td colspan="${months.length + 3}" class="hint">No brother matches.</td></tr>`;
 
   document.getElementById('att-count').textContent =
     rows.length + (rows.length === 1 ? ' brother' : ' brethren');
+  document.getElementById('att-span-note').textContent = attSpanWords(span);
+  attSyncTermSelect(span);
   attShowDirty();
+}
+
+/* Says in words what the columns cover, because "Mar 24 … Feb 25" read off
+   a header is the kind of thing an officer gets wrong in a report. */
+function attSpanWords(span) {
+  if (!span.months.length) return 'Give a month to show.';
+  if (span.whole) {
+    return 'Lodge year ' + lodgeYearLabel(attTermStart) +
+      ' \u2014 March to February, the span the six-attendance rule is counted over.';
+  }
+  const a = span.months[0], b = span.months[span.months.length - 1];
+  const where = a.key === b.key ? a.label + ' ' + a.year
+    : a.label + ' ' + a.year + ' to ' + b.label + ' ' + b.year;
+  return span.months.length + ' month' + (span.months.length === 1 ? '' : 's') + ', ' + where +
+    '. The count beside each brother is for these months only, not the six needed to vote.' +
+    (span.clipped ? ' Cut at ' + ATT_MAX_MONTHS + ' months \u2014 narrow the range to see the rest.' : '');
+}
+
+/* The lodge-year box and the two month boxes are one setting between them.
+   Whichever was touched last is the truth, and the other says so rather
+   than sitting there naming a year nobody is looking at. */
+function attSyncTermSelect(span) {
+  const sel = document.getElementById('att-term');
+  if (!sel.options.length) return;
+  sel.value = span.whole ? String(attTermStart) : '';
 }
 
 /* The script takes a roll call — one month, many brethren — not a
@@ -5740,7 +5856,7 @@ function loadAttendanceTab() {
   const sel = document.getElementById('att-term');
   const terms = attKnownTerms();
   if (attTermStart === null) attTermStart = currentLodgeYearStart();
-  sel.innerHTML = terms.map(y =>
+  sel.innerHTML = '<option value="">\u2014 a span of my own \u2014</option>' + terms.map(y =>
     `<option value="${y}"${y === attTermStart ? ' selected' : ''}>${lodgeYearLabel(y)}</option>`).join('');
   renderAttendanceGrid();
 }
@@ -5770,10 +5886,15 @@ document.getElementById('att-table').addEventListener('change', ev => {
   }
 });
 
-['att-filter', 'att-scope'].forEach(id =>
+['att-filter', 'att-scope', 'att-from', 'att-to'].forEach(id =>
   document.getElementById(id).addEventListener('input', renderAttendanceGrid));
 document.getElementById('att-term').addEventListener('change', ev => {
+  // Picking a lodge year means the whole of it, so the two month boxes get
+  // out of the way rather than silently overriding what was just chosen.
+  if (!ev.target.value) return;                 // the placeholder; leave the range alone
   attTermStart = Number(ev.target.value);
+  document.getElementById('att-from').value = '';
+  document.getElementById('att-to').value = '';
   renderAttendanceGrid();
 });
 document.getElementById('att-revert').addEventListener('click', () => {
@@ -5858,6 +5979,7 @@ async function loadPhotoQueue() {
   }
 
   const list = out.data.pending || [];
+  photoPending = list;
   setPhotoBadge(list.length);
   if (!list.length) {
     box.innerHTML = '<p class="hint">No pictures waiting.</p>';
@@ -5953,6 +6075,12 @@ const ACCOUNT_STATE = {
   none:    { badge: 'neutral', text: 'No account yet' }
 };
 
+/* Both of these screens used to render what came back and keep nothing, so
+   an export had to scrape the page it was sitting under. Held here instead:
+   one list, read by the table and by the file alike. */
+let accountChairs = [];
+let photoPending = [];
+
 async function loadAccounts() {
   const body = document.getElementById('accounts-body');
   body.innerHTML = '<tr><td colspan="5" class="hint">Loading…</td></tr>';
@@ -5972,6 +6100,7 @@ async function loadAccounts() {
     return;
   }
 
+  accountChairs = data.chairs || [];
   body.innerHTML = data.chairs.map(c => {
     const state = ACCOUNT_STATE[c.state] || ACCOUNT_STATE.none;
     const account = c.invitePending
@@ -6390,6 +6519,250 @@ document.getElementById('new-member-save-btn').addEventListener('click', async (
     msg.textContent = err.message;
   }
 });
+
+/* ---------------------------------------------------------------------
+   TAKING IT AWAY — an export on every screen that holds a list
+
+   Reports already exported the roster, attendance, arrears and the
+   payment book. Everything else on the dashboard could only be read on
+   the page, which is no use to an officer writing the annual return or
+   handing over in March.
+
+   One rule throughout: a build function returns the rows the screen is
+   ALREADY showing, filters and all. An export that quietly widens to
+   "everything" disagrees with the table above it, and a file that
+   disagrees with the screen is worse than no file, because it is
+   believed. Where the whole set is worth having as well, it goes in the
+   workbook as a second sheet and says so in its name.
+
+   The three screens with no list of their own — Log a Dues Payment, Add
+   a New Member, and the activity, officer and announcement forms — have
+   no button, because there is nothing on them to take away.
+   --------------------------------------------------------------------- */
+function wireExport(hostId, build, opts) {
+  const host = document.getElementById(hostId);
+  if (!host) return;
+  opts = opts || {};
+  host.innerHTML =
+    '<button class="btn btn-sm" type="button" data-kind="csv">Export to CSV</button>' +
+    (opts.csvOnly ? ''
+      : '<button class="btn btn-sm" type="button" data-kind="xlsx">Export to Excel</button>') +
+    (opts.note ? '<span class="hint" style="align-self:center">' + opts.note + '</span>' : '');
+
+  host.addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-kind]');
+    if (!btn) return;
+    let out;
+    try { out = build(); }
+    catch (err) { toast(err.message, 'bad'); return; }
+    if (!out) { toast('Nothing to export yet — open the screen first.', 'bad'); return; }
+
+    const name = 'NMT42-' + out.name + '-' + stamp();
+    if (btn.dataset.kind === 'csv') {
+      if (!out.rows || !out.rows.length) { toast('Nothing to export yet.', 'bad'); return; }
+      downloadCsv(name + '.csv', out.header, out.rows);
+    } else {
+      const sheets = out.sheets ||
+        [{ name: out.sheetName || 'Data', header: out.header, rows: out.rows }, exportAbout()];
+      if (!sheets.some(sh => sh.rows.length)) { toast('Nothing to export yet.', 'bad'); return; }
+      downloadXlsx(name + '.xlsx', sheets);
+    }
+  });
+}
+
+/* Every file says which Lodge it came from, when it was taken, and that it
+   holds names. A spreadsheet on a desk in March cannot be asked. */
+function exportAbout(extra) {
+  return { name: 'About', header: ['Field', 'Value'], rows: [
+    ['Lodge', 'Noli Me Tangere Lodge No. 42, F. & A. M.'],
+    ['Exported', new Date().toLocaleString()]
+  ].concat(extra || []).concat([
+    ['Note', 'May contain member names and standing. Treat it as the Lodge book.']
+  ]) };
+}
+
+const yn = v => String(v || '').toUpperCase() === 'Y' ? 'Y' : 'N';
+
+/* ---- Attendance & Arrears: the grid as drawn, month columns and all ---- */
+function attExportBuild() {
+  const span = attSpan();
+  const months = span.months;
+  const header = ['Member ID', 'Brother', 'Status', 'Arrears']
+    .concat(months.map(mo => mo.label + ' ' + mo.year))
+    .concat([span.whole ? 'Of 6' : 'Count in range']);
+
+  const body = list => list.map(m => {
+    const stored = attStored(m);
+    const codes = months.map(mo => attCurrentCode(m, stored, mo.key));
+    return [m.memberId, m.fullName, m.status || '', attArrearsOf(m)]
+      .concat(codes)
+      .concat([codes.filter(c => ATT_COUNTED.has(c)).length]);
+  });
+
+  const shown = attRows();
+  const label = span.whole ? 'lodge-year-' + attTermStart
+    : (months.length ? months[0].key + '_to_' + months[months.length - 1].key : 'no-months');
+  const sheets = [{ name: 'On screen', header, rows: body(shown) }];
+  // The filter is the officer's question; the whole roll is the answer he
+  // will want next, and it costs one more sheet rather than a second trip.
+  if (shown.length !== fullRoster.length) {
+    sheets.push({ name: 'Whole roll', header, rows: body(fullRoster) });
+  }
+  sheets.push(exportAbout([
+    ['Months shown', months.length],
+    ['Span', attSpanWords(span)],
+    ['Unsaved edits', attEdits.size + attArrearsEdits.size]
+  ]));
+  return { name: 'attendance-' + label, header, rows: body(shown), sheets };
+}
+
+/* ---- Roll Call: the sheet being marked, before it is sent ----
+   Read off the page on purpose. The codes being exported are the ones in
+   the boxes, which is the only copy that exists until Save is pressed. */
+function rollcallExportBuild() {
+  const month = document.getElementById('rollcall-month').value || '';
+  const header = ['Member ID', 'Brother', 'Status', 'Code', 'Counts toward the six'];
+  const rows = Array.from(document.querySelectorAll('#rollcall-table tbody tr'))
+    .filter(tr => tr.style.display !== 'none')
+    .map(tr => {
+      const sel = tr.querySelector('select');
+      const code = sel ? sel.value : '';
+      return [sel ? sel.dataset.member : '', tr.cells[0].textContent.trim(),
+              tr.cells[1].textContent.trim(), code || '(absent)',
+              ATT_COUNTED.has(code) ? 'Y' : 'N'];
+    });
+  return { name: 'roll-call-' + (month || 'unset'), sheetName: 'Roll call', header, rows,
+           sheets: [{ name: 'Roll call', header, rows },
+                    exportAbout([['Meeting month', month || 'not chosen yet'],
+                                 ['Marked', rows.filter(r => r[3] !== '(absent)').length],
+                                 ['Saved to the sheet', 'No — this is the screen, not the record']])] };
+}
+
+/* ---- Activities, Officers, Bulletin: the lists as loaded ---- */
+function activitiesExportBuild() {
+  const header = ['Activity ID', 'Date', 'Category', 'Title', 'Description', 'Photos', 'Photo URLs'];
+  const rows = allActivities.map(a => [a.activityId, a.date || '', a.category || '', a.title || '',
+    a.description || '', (a.photoUrls || []).length, (a.photoUrls || []).join(' ')]);
+  return { name: 'activities', sheetName: 'Activities', header, rows };
+}
+
+function officersExportBuild() {
+  const header = ['Officer ID', 'Chair', 'Brother', 'Term', 'Standing', 'Notes', 'Photo URL'];
+  const rows = allOfficers.map(o => [o.officerId, o.position || '', o.fullName || '', o.term || '',
+    o.status || '', o.notes || '', o.photoUrl || '']);
+  const current = rows.filter(r => r[4] === 'Current');
+  return { name: 'officers', sheetName: 'Officers', header, rows,
+           sheets: current.length && current.length !== rows.length
+             ? [{ name: 'This term', header, rows: current },
+                { name: 'Every term', header, rows }, exportAbout()]
+             : [{ name: 'Officers', header, rows }, exportAbout()] };
+}
+
+function bulletinExportBuild() {
+  const header = ['Announcement ID', 'Posted', 'Expires', 'Pinned', 'Title', 'Message'];
+  const rows = allAnnouncements.map(a => [a.announcementId, a.datePosted || '', a.expiryDate || '',
+    yn(a.pinned === true || a.pinned === 'Y' ? 'Y' : 'N'), a.title || '', a.message || '']);
+  return { name: 'bulletin', sheetName: 'Bulletin', header, rows };
+}
+
+/* ---- Officer accounts: who can get in, never how ----
+   No password, no hash, no invitation link. The file answers "which chairs
+   are set up", which is the question, and carries nothing that would let
+   whoever picks it up sign in as anybody. */
+function accountsExportBuild() {
+  const header = ['Chair', 'Access', 'Account', 'Link sent, not used', 'Asked for a link'];
+  const rows = accountChairs.map(c => [c.label || c.chair,
+    c.canEdit ? 'Can change records' : 'View only',
+    (ACCOUNT_STATE[c.state] || ACCOUNT_STATE.none).text,
+    yn(c.invitePending ? 'Y' : 'N'), yn(c.requestedBy ? 'Y' : 'N')]);
+  return { name: 'officer-accounts', header, rows,
+           sheets: [{ name: 'Accounts', header, rows },
+                    exportAbout([['Deliberately not included',
+                                  'Passwords, password hashes, invitation links and email addresses']])] };
+}
+
+/* ---- Member photographs waiting for approval ---- */
+function photoExportBuild() {
+  const header = ['Brother as he gave it', 'On the roster', 'Member ID', 'Has a picture now'];
+  const rows = photoPending.map(req => {
+    const m = fullRoster.find(x => normaliseName(x.fullName) === normaliseName(req.fullName));
+    return [req.fullName || '', m ? m.fullName : 'no match', m ? m.memberId : '',
+            yn(m && m.photoUrl ? 'Y' : 'N')];
+  });
+  return { name: 'photos-waiting', sheetName: 'Waiting', header, rows };
+}
+
+/* ---- Analytics: the figures behind every chart ----
+   A picture cannot be checked. These are the numbers each chart is drawn
+   from, so an officer can see where a shape came from — and the projection
+   carries the assumptions that produced it, because a line of totals with
+   no assumptions beside it is a forecast nobody can argue with. */
+function analyticsExportBuild() {
+  if (!fullRoster.length) return null;
+  const d = analyticsData();
+  const terms = [...d.attenders.keys()].sort((a, b) => a - b);
+  const years = [...d.raisedBy.keys()].sort((a, b) => a - b).filter(y => y >= 1990);
+
+  const headline = [
+    ['Brethren on the roll', d.all],
+    ['Active brethren', d.active],
+    ['In good standing', d.goodStanding],
+    ['Qualified to vote', d.canVote],
+    ['Owed to the Lodge', d.totalArrears],
+    ['Brethren owing', d.owing.length],
+    ['Median age', d.medianAge === null ? 'not known' : d.medianAge],
+    ['Mean raisings, last ten years', Math.round(d.meanRaisings * 100) / 100]
+  ];
+
+  const bands = [[0,29],[30,39],[40,49],[50,59],[60,69],[70,79],[80,120]];
+  const fc = document.getElementById('fc-raisings');
+  const projection = forecast(d.ages, {
+    raisings: Number(fc && fc.value) || d.meanRaisings,
+    lapsePercent: Number(document.getElementById('fc-lapse').value) || 0
+  });
+  const thisYear = new Date().getFullYear();
+
+  const sheets = [
+    { name: 'Headline', header: ['Figure', 'Value'], rows: headline },
+    { name: 'Raised by year', header: ['Year', 'Brethren still on the roll'],
+      rows: years.map(y => [y, d.raisedBy.get(y) || 0]) },
+    { name: 'Attendance by year',
+      header: ['Lodge year', 'Different brethren who came', 'Marks recorded'],
+      rows: terms.map(t => [lodgeYearLabel(t), (d.attenders.get(t) || new Set()).size,
+                            d.marks.get(t) || 0]) },
+    { name: 'Standing', header: ['Status', 'Brethren'],
+      rows: [...d.statuses.entries()].sort((a, b) => b[1] - a[1]) },
+    { name: 'Ages', header: ['Band', 'Brethren'],
+      rows: bands.map(([lo, hi]) => [hi > 100 ? '80+' : lo + '-' + hi,
+                                     d.ages.filter(a => a >= lo && a <= hi).length]) },
+    { name: 'Arrears', header: ['Brother', 'Status', 'Owes'],
+      rows: d.owing.slice().sort((a, b) => (Number(b.arrears) || 0) - (Number(a.arrears) || 0))
+        .map(m => [m.fullName, m.status || '', Number(m.arrears) || 0]) },
+    { name: 'Projection', header: ['Year', 'Brethren projected'],
+      rows: projection.map(r => [thisYear + r.year, Math.round(r.total)]) },
+    exportAbout([
+      ['Projection: raised per year', Number(fc && fc.value) || Math.round(d.meanRaisings * 100) / 100],
+      ['Projection: lapse and demit, % a year', document.getElementById('fc-lapse').value],
+      ['Projection', 'An arithmetic model, not a prediction. The assumptions above produced it.'],
+      ['Ages', 'Only brethren whose date of birth is on record are counted: '
+               + d.ages.length + ' of ' + d.all + '.']
+    ])
+  ];
+  return { name: 'analytics', header: ['Figure', 'Value'], rows: headline, sheets };
+}
+
+wireExport('att-export', attExportBuild);
+wireExport('rollcall-export', rollcallExportBuild,
+  { note: 'Takes the codes in the boxes, saved or not.' });
+wireExport('activities-export', activitiesExportBuild);
+wireExport('officers-export', officersExportBuild);
+wireExport('bulletin-export', bulletinExportBuild);
+wireExport('accounts-export', accountsExportBuild,
+  { note: 'No passwords, links or email addresses.' });
+wireExport('photo-export', photoExportBuild);
+wireExport('an-export', analyticsExportBuild,
+  { note: 'The figures behind every chart above.' });
+
 </script>
 </body>
 </html>

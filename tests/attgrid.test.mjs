@@ -15,9 +15,10 @@ function grab(name) {
 
 const ctx = {};
 new Function('ctx', [
-  "const ATT_MONTH_NAMES = ['Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb'];",
+  "const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];",
   "const ATT_COUNTED = new Set(['C','NO','NC']);",
   "const MONTH_INDEX = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};",
+  grab('attMonthCell'),
   grab('attTermMonths'), grab('attMoney'), grab('attGroupByMonth'),
   grab('monthKey'), grab('attStored'),
   "ctx.attTermMonths = attTermMonths; ctx.attMoney = attMoney;",
