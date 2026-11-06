@@ -2,7 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- viewport-fit=cover lets the page paint under the notch and the home
+     indicator. Without it an installed app gets black bars; with it, the
+     safe-area insets below are what keep content out from under them. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<!-- INSTALLING THIS AS AN APP
+     Android reads the manifest: name, icons, standalone display. iOS reads
+     almost none of it, so the three apple-* lines are not duplicates — they
+     are the whole of what Safari uses for a home-screen app, and the touch
+     icon is a separate file because iOS will not take one from the manifest. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#070907">
+<meta name="application-name" content="NMT Lodge 42">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NMT Lodge 42">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="icon" href="/noli-logo.jpg">
 <title>Noli Me Tangere Lodge No. 42 — Membership &amp; Attendance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -97,6 +116,24 @@
     -webkit-font-smoothing:antialiased;
     overflow-x:hidden;
   }
+  /* Running as an installed app there is no browser chrome, so the page
+     owns the whole screen — including the strip under the notch and the
+     bar the home indicator sits on. These insets are nil in a browser
+     and on every phone without them, so the rule costs nothing there. */
+  @media (display-mode:standalone){
+    .nav-shell{ top:env(safe-area-inset-top, 0px) }
+    main{
+      padding-left:max(20px, env(safe-area-inset-left));
+      padding-right:max(20px, env(safe-area-inset-right));
+    }
+    .site-footer{
+      padding-left:max(20px, env(safe-area-inset-left));
+      padding-right:max(20px, env(safe-area-inset-right));
+      padding-bottom:calc(60px + env(safe-area-inset-bottom, 0px));
+    }
+    .toast-tray{ bottom:calc(18px + env(safe-area-inset-bottom, 0px)) }
+  }
+
   h1,h2,h3,.display{
     font-family:var(--font-display);
     letter-spacing:.03em;
@@ -6762,6 +6799,67 @@ wireExport('accounts-export', accountsExportBuild,
 wireExport('photo-export', photoExportBuild);
 wireExport('an-export', analyticsExportBuild,
   { note: 'The figures behind every chart above.' });
+
+
+/* ---------------------------------------------------------------------
+   INSTALLED ON A PHONE
+
+   Two small things, and deliberately only two.
+
+   The worker is what makes the app open without a signal, and what
+   Chrome requires before it will offer to install at all. It caches the
+   shell and nothing that carries a member's name — see sw.js, which is
+   where that rule is kept.
+
+   The shortcut handler is for the three entries in the manifest: on
+   Android, holding the icon offers "My status", "Bulletin" and
+   "Activities", and each opens the app at /?tab=<name>. The tabs are
+   buttons rather than addresses, so the parameter is read once on load
+   and the matching one is pressed. An unknown name is ignored, which is
+   what should happen when a stale shortcut outlives a tab.
+   --------------------------------------------------------------------- */
+(function wireInstalledApp() {
+  const tab = new URLSearchParams(location.search).get('tab');
+  if (tab) {
+    const btn = document.querySelector('.main-tab[data-panel="' + CSS.escape(tab) + '"]');
+    // The admin door is not a shortcut target: it is behind a password,
+    // and sending a brother there from his home screen only confuses him.
+    if (btn) btn.click();
+    // Leave the address bar clean, so a reload does not re-press the tab
+    // after the brother has navigated somewhere else.
+    history.replaceState(null, '', location.pathname);
+  }
+
+  if (!('serviceWorker' in navigator)) return;
+  // file:// has no origin a worker can be scoped to, and registering
+  // from one throws rather than returning a rejected promise.
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      // An app that cannot cache is still a working website, so this is
+      // worth a line in the console and nothing more.
+      console.warn('Offline support unavailable:', err.message);
+    });
+  });
+
+  /* A worker that takes over mid-session has brought a new copy of the
+     page with it, so reload once to put the two in step.
+
+     Only when a worker was ALREADY in charge when this page loaded. The
+     very first worker claims the page it was registered from, and
+     reloading on that would make every brother's first visit flicker
+     for no reason — there is no new version on a first install, only a
+     first one. And only once, because a worker that keeps claiming
+     would otherwise loop the page forever. */
+  const hadWorker = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadWorker || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+})();
 
 </script>
 </body>

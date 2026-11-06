@@ -1,0 +1,40 @@
+{
+  "id": "/",
+  "name": "Noli Me Tangere Lodge No. 42",
+  "short_name": "NMT Lodge 42",
+  "description": "Membership, attendance and standing for Noli Me Tangere Lodge No. 42, F. & A. M., Manila.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#070907",
+  "theme_color": "#070907",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Find my status",
+      "short_name": "My status",
+      "url": "/?tab=lookup",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Bulletin board",
+      "short_name": "Bulletin",
+      "url": "/?tab=bulletin",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Activities",
+      "short_name": "Activities",
+      "url": "/?tab=activities",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
