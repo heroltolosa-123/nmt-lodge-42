@@ -548,6 +548,14 @@
      buttons sits the same way on each one so it is found without looking. */
   .export-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px }
   .export-row:empty{ display:none }
+
+  .notify-bar{
+    display:flex; gap:14px; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; margin:0 0 22px; padding:14px 18px;
+    border:1px solid var(--line); border-radius:12px;
+    background:linear-gradient(180deg, rgba(217,180,100,.055), rgba(217,180,100,.015));
+  }
+  .notify-bar strong{ font-family:var(--font-ui); font-size:14px; letter-spacing:.01em }
   .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px }
   .grid-2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:20px }
   .grid-2 label.hint{ display:block; margin-bottom:6px }
@@ -1637,6 +1645,17 @@
       <div class="rule-wrap rake "><svg class="rule" viewBox="0 -12 240 24" preserveAspectRatio="none" aria-hidden="true"><use href="#orn-lathe"/></svg></div>
     </div>
     <div id="bulletin-status" class="hint" role="status" aria-live="polite"></div>
+
+    <!-- Hidden until the browser proves it can do this, because an offer
+         a phone cannot accept is worse than no offer. -->
+    <div class="notify-bar" id="notify-bar" hidden>
+      <div>
+        <strong id="notify-title">Be told when a notice is posted</strong>
+        <p class="hint" id="notify-note" style="margin:4px 0 0"></p>
+      </div>
+      <button class="btn btn-sm" type="button" id="notify-toggle">Notify me</button>
+    </div>
+
     <div id="bulletin-list"></div>
   </section>
 
@@ -2251,7 +2270,14 @@
         <p class="hint" style="margin-top:-6px">Everything here shows up publicly under "Bulletin Board." Pinned items always appear first.</p>
         <div class="search-row">
           <button class="btn editors-only" id="announcement-new-btn"><span class="btn-icon-row"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Post Announcement</span></button>
+          <button class="btn btn-sm editors-only" type="button" id="notify-send">Notify the brethren</button>
         </div>
+        <p class="hint" id="notify-send-msg" role="status" aria-live="polite"></p>
+        <p class="hint">Post the notice first, then press <strong>Notify the brethren</strong>.
+           It wakes every phone that has the Lodge installed and has agreed to be told
+           &mdash; no message is sent through Apple or Google, only a knock; each phone
+           then reads the board itself. Brethren who have not installed it, or have not
+           agreed, are not reached and cannot be counted.</p>
         <div class="export-row" id="bulletin-export"></div>
         <div id="bulletin-admin-list"></div>
       </div>
@@ -2622,6 +2648,8 @@ function selectMainTab(btn, moveFocus) {
   btn.setAttribute('aria-selected', 'true');
   btn.tabIndex = 0;
   showPanel(btn.dataset.panel);
+  // Opening the board is reading it.
+  if (btn.dataset.panel === 'bulletin') markBulletinRead(publicAnnouncements);
   if (moveFocus) btn.focus();
   kindle();
   countUpAll();
@@ -2897,6 +2925,16 @@ const MONTH_INDEX = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
    a const declared further down does not exist yet when it does. */
 const ATT_COUNTED = new Set(['C', 'NO', 'NC']);
 const INACTIVE_RE = /suspend|expel|decease|dropped|demit/i;
+
+/* Which notices this brother has already read, and where that is kept.
+   The Cache API rather than localStorage, because the service worker has
+   to read the same list when a push arrives and a worker has no
+   localStorage. Declared up here for the same reason as the two above:
+   the bulletin loads while the page is still parsing, and a const
+   declared further down does not exist yet when it does. */
+const SEEN_CACHE = 'nmt42-shell-v1';     // the worker's own cache, shared on purpose
+const SEEN_KEY   = '/__seen-announcements';
+let publicAnnouncements = [];            // what is on the board right now
 
 function lodgeYearOf(label) {
   const m = String(label || '').trim().match(/^([A-Za-z]{3})[a-z]*\s+(\d{4})$/);
@@ -3621,6 +3659,15 @@ async function loadPublicBulletin() {
         'No notices are posted at the moment. Announcements from the secretary will show up here.'
       );
       return;
+    }
+    publicAnnouncements = items;
+    /* The panel may already be open — a shortcut, or a reload on the
+       Bulletin — in which case he is reading them now and they are not
+       unread. Otherwise the icon carries the count until he looks. */
+    if (document.getElementById('panel-bulletin').classList.contains('active')) {
+      markBulletinRead(items);
+    } else {
+      refreshBadge(items);
     }
     list.innerHTML = items.map((a, i) => `
       <article class="bulletin-card${a.pinned ? ' pinned' : ''}" data-kindle style="--kindle-delay:${Math.min(i * 80, 560)}ms">
@@ -6858,6 +6905,222 @@ wireExport('an-export', analyticsExportBuild,
     if (!hadWorker || reloading) return;
     reloading = true;
     location.reload();
+  });
+})();
+
+
+/* ---------------------------------------------------------------------
+   BEING TOLD, AND THE COUNT ON THE ICON
+
+   Two separate things that happen to share a store.
+
+   NOTIFICATIONS. Only offered when the browser can actually do it. On
+   an iPhone that means the Lodge has been added to the Home Screen and
+   opened from there — Safari refuses a permission prompt otherwise —
+   so the bar says which it is rather than showing a button that fails.
+
+   Permission is asked for on a tap and never on load. An unprompted
+   permission dialog is how a site teaches people to press Block, and
+   Block is close to permanent.
+
+   THE COUNT. The number on the app icon is how many notices are up that
+   this brother has not read. Opening the Bulletin marks them read. The
+   list of what he has seen lives in the Cache API rather than in
+   localStorage, because the service worker has to read it too when a
+   push arrives and a worker has no localStorage.
+   --------------------------------------------------------------------- */
+async function readSeenIds() {
+  try {
+    const hit = await (await caches.open(SEEN_CACHE)).match(SEEN_KEY);
+    return hit ? new Set(await hit.json()) : new Set();
+  } catch (err) { return new Set(); }
+}
+
+async function writeSeenIds(ids) {
+  try {
+    const cache = await caches.open(SEEN_CACHE);
+    await cache.put(SEEN_KEY, new Response(JSON.stringify([...ids]),
+      { headers: { 'Content-Type': 'application/json' } }));
+  } catch (err) { /* private window, or storage refused; the badge just stays */ }
+}
+
+async function setBadge(n) {
+  try {
+    if (n > 0 && navigator.setAppBadge) await navigator.setAppBadge(n);
+    else if (navigator.clearAppBadge) await navigator.clearAppBadge();
+  } catch (err) { /* a courtesy, never a failure */ }
+}
+
+/* Called once the board has loaded. `live` is what is on it now, so a
+   notice taken down stops counting and a brother who has read
+   everything carries no number. */
+async function refreshBadge(live) {
+  const seen = await readSeenIds();
+  await setBadge(live.filter(a => !seen.has(String(a.announcementId))).length);
+}
+
+async function markBulletinRead(live) {
+  await writeSeenIds(new Set(live.map(a => String(a.announcementId))));
+  await setBadge(0);
+}
+
+(function wireNotifications() {
+  const bar = document.getElementById('notify-bar');
+  const btn = document.getElementById('notify-toggle');
+  const note = document.getElementById('notify-note');
+  if (!bar) return;
+
+  const standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                     window.navigator.standalone === true;
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let vapidKey = null;
+
+  /* The browser wants the key as bytes, and it arrives as base64url. */
+  function keyBytes(b64) {
+    const pad = '='.repeat((4 - b64.length % 4) % 4);
+    const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, c => c.charCodeAt(0));
+  }
+
+  async function currentSubscription() {
+    const reg = await navigator.serviceWorker.getRegistration();
+    return reg ? reg.pushManager.getSubscription() : null;
+  }
+
+  function show(state, text) {
+    bar.hidden = false;
+    note.textContent = text;
+    btn.hidden = state === 'unavailable';
+    btn.textContent = state === 'on' ? 'Stop notifying me' : 'Notify me';
+    btn.setAttribute('aria-pressed', state === 'on' ? 'true' : 'false');
+  }
+
+  async function paint() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      /* iOS only grows a PushManager once the app is on the Home Screen,
+         so on an iPhone in Safari this is an instruction, not a refusal. */
+      if (iOS && !standalone) {
+        show('unavailable', 'On iPhone: tap Share, then Add to Home Screen, and open the '
+           + 'Lodge from your home screen. The notice below will offer to notify you there.');
+      } else {
+        show('unavailable', 'This browser cannot send notifications. Chrome on Android, '
+           + 'or the Lodge added to your iPhone home screen, can.');
+      }
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      show('unavailable', 'Notifications are blocked for this site in your phone’s settings. '
+         + 'Allow them there and this will offer again.');
+      return;
+    }
+    const sub = await currentSubscription();
+    if (sub) show('on', 'You will be told when the secretary posts a notice.');
+    else show('off', 'A knock on your phone when something is posted. Nothing else — '
+                   + 'the Lodge sends no message through Apple or Google, only a knock.');
+  }
+
+  async function serverKey() {
+    if (vapidKey) return vapidKey;
+    const res = await fetch('/api/push');
+    const data = await res.json().catch(() => ({}));
+    if (!data.configured || !data.key) return null;
+    vapidKey = data.key;
+    return vapidKey;
+  }
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      const existing = await currentSubscription();
+      if (existing) {
+        await fetch('/api/push', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unsubscribe: existing.endpoint })
+        });
+        await existing.unsubscribe();
+        toast('You will no longer be notified.', 'ok');
+        await paint();
+        return;
+      }
+
+      const key = await serverKey();
+      if (!key) { toast('Notifications are not set up on the Lodge’s side yet.', 'bad'); return; }
+
+      // Asked for here, inside the tap, which is the only place a phone
+      // will honour it.
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        toast('Not allowed. You can change that in your phone’s settings.', 'bad');
+        await paint();
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,                 // required, and we honour it
+        applicationServerKey: keyBytes(key)
+      });
+      const res = await fetch('/api/push', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscribe: sub.endpoint })
+      });
+      if (!res.ok) {
+        // Leaving the phone subscribed to a server that will never send
+        // is worse than not being subscribed: it looks like it works.
+        await sub.unsubscribe();
+        const data = await res.json().catch(() => ({}));
+        toast(data.error === 'full' ? 'The Lodge’s list is full. Tell the Secretary.'
+                                    : 'Could not register with the Lodge. Try again later.', 'bad');
+      } else {
+        toast('You will be told when a notice is posted.', 'ok');
+      }
+    } catch (err) {
+      toast(err.message || 'Could not change that.', 'bad');
+    } finally {
+      btn.disabled = false;
+      await paint();
+    }
+  });
+
+  paint();
+})();
+
+/* The officers' end: one button, and an honest count back. */
+(function wireNotifySend() {
+  const btn = document.getElementById('notify-send');
+  if (!btn) return;
+  const msg = document.getElementById('notify-send-msg');
+
+  btn.addEventListener('click', async () => {
+    if (!confirm('Wake every phone that has agreed to be told? Do this after the notice '
+               + 'is posted, not before.')) return;
+    btn.disabled = true;
+    msg.innerHTML = '<span class="spinner"></span>Knocking…';
+    try {
+      const res = await fetch('/api/push', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', body: JSON.stringify({ send: true })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        msg.textContent = data.detail || ({
+          no_keys: 'Notifications are not set up yet — the signing key is missing.',
+          not_signed_in: 'Your session has ended. Sign in again.'
+        })[data.error] || data.error || ('Server returned ' + res.status);
+        return;
+      }
+      msg.textContent = data.total === 0
+        ? 'Nobody has agreed to be notified yet, so nothing was sent.'
+        : data.sent + ' of ' + data.total + ' phones reached'
+          + (data.pruned ? ', ' + data.pruned + ' dropped as no longer there' : '')
+          + (data.failed ? ', ' + data.failed + ' did not answer' : '') + '.';
+      if (data.sent) toast(data.sent + ' notified.', 'ok');
+    } catch (err) {
+      msg.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
   });
 })();
 

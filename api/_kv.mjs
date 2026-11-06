@@ -70,3 +70,35 @@ export async function kvSet(key, value, ttlSeconds) {
 export async function kvDel(key) {
   return call('/del/' + encodeURIComponent(key), { method: 'POST' });
 }
+
+/* ---------------------------------------------------------------------
+   SETS — for the push subscriptions.
+
+   A set rather than one key holding a JSON list, because SADD is atomic
+   and read-modify-write is not: two brethren allowing notifications in
+   the same second would otherwise lose one of each other, silently, and
+   the one who lost would simply never be notified again.
+
+   The member goes in the path like the key does. A push endpoint is a
+   long URL full of slashes and colons, so it has to be encoded, but it
+   is a few hundred characters and nowhere near any limit.
+   --------------------------------------------------------------------- */
+export async function kvSAdd(key, member) {
+  return call('/sadd/' + encodeURIComponent(key) + '/' + encodeURIComponent(member),
+              { method: 'POST' });
+}
+
+export async function kvSRem(key, member) {
+  return call('/srem/' + encodeURIComponent(key) + '/' + encodeURIComponent(member),
+              { method: 'POST' });
+}
+
+export async function kvSMembers(key) {
+  // With no store configured call() returns null, and every caller here
+  // wants to iterate — so an empty list, not a crash.
+  return (await call('/smembers/' + encodeURIComponent(key))) || [];
+}
+
+export async function kvSCard(key) {
+  return Number(await call('/scard/' + encodeURIComponent(key))) || 0;
+}

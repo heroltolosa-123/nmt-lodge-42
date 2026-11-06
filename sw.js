@@ -107,3 +107,105 @@ self.addEventListener('fetch', event => {
   }
   // Everything else: left alone.
 });
+
+
+/* ---------------------------------------------------------------------
+   BEING TOLD, AND THE COUNT ON THE ICON
+
+   The push that arrives is EMPTY. The Lodge's server signs a token and
+   nothing more, so Apple and Google carry the fact that something was
+   posted and never the posting itself. This worker then fetches the
+   bulletin and reads it here, on the phone.
+
+   That is why there is a fetch in a push handler, which usually means
+   somebody has done something wrong. Here it is the point.
+
+   Apps Script answers the bulletin to anyone — it is the same list the
+   front page shows a stranger — so no key travels with this request and
+   none is held in this file.
+   --------------------------------------------------------------------- */
+
+const BULLETIN_URL = 'https://script.google.com/macros/s/AKfycbwUcMlS1ePkQiRNTwk8kUTilL0CX7P_-CqAuQBRp9hyj9wK69OXNobEnkFeUze5ErFu/exec?action=bulletin';
+
+/* The page and this worker both need to know which announcements the
+   brother has already seen, and they cannot share localStorage — a
+   worker has none. The Cache API is the one store both can open. */
+const SEEN_KEY = '/__seen-announcements';
+
+async function readSeen() {
+  try {
+    const hit = await (await caches.open(CACHE)).match(SEEN_KEY);
+    return hit ? new Set(await hit.json()) : new Set();
+  } catch (err) { return new Set(); }
+}
+
+async function liveAnnouncements() {
+  const res = await fetch(BULLETIN_URL, { cache: 'no-store' });
+  if (!res.ok) throw new Error('bulletin ' + res.status);
+  const data = await res.json();
+  const today = new Date().toISOString().slice(0, 10);
+  // An announcement past its expiry is off the board, so it is not news.
+  return (data.announcements || []).filter(a => !a.expiryDate || a.expiryDate >= today);
+}
+
+/* The number on the icon. Zero clears it rather than showing a nought. */
+async function setBadge(n) {
+  try {
+    if (!self.registration.setAppBadge) return;
+    if (n > 0) await self.registration.setAppBadge(n);
+    else if (self.registration.clearAppBadge) await self.registration.clearAppBadge();
+  } catch (err) { /* badging is a courtesy, never a failure */ }
+}
+
+self.addEventListener('push', event => {
+  /* Every push MUST end in a visible notification. Both Chrome and
+     Safari allow a handful of silent ones and then revoke permission
+     for the site entirely — so the catch below still shows something,
+     rather than letting a failed fetch cost the Lodge its permission. */
+  event.waitUntil((async () => {
+    let title = 'Noli Me Tangere Lodge No. 42';
+    let body = 'A new notice is on the bulletin board.';
+    let unread = 1;
+    try {
+      const live = await liveAnnouncements();
+      const seen = await readSeen();
+      const fresh = live.filter(a => !seen.has(String(a.announcementId)));
+      unread = fresh.length || live.length;
+      if (fresh.length === 1) {
+        title = fresh[0].title || title;
+        body = String(fresh[0].message || '').slice(0, 180) || body;
+      } else if (fresh.length > 1) {
+        body = fresh.length + ' new notices are on the bulletin board.';
+      }
+    } catch (err) {
+      // Offline, or the script is slow. The brother still gets told.
+    }
+    await setBadge(unread);
+    await self.registration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: 'nmt-bulletin',          // a second push replaces the first
+      renotify: true,
+      data: { url: '/?tab=bulletin' }
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/?tab=bulletin';
+  event.waitUntil((async () => {
+    /* Bring the app he already has open to the front rather than opening
+       a second copy of it. */
+    const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of open) {
+      if (new URL(client.url).origin === self.location.origin) {
+        await client.focus();
+        if (client.navigate) await client.navigate(target).catch(() => {});
+        return;
+      }
+    }
+    await self.clients.openWindow(target);
+  })());
+});

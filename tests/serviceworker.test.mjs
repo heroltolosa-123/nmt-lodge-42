@@ -38,11 +38,23 @@ function load() {
   };
   const key = r => typeof r === 'string' ? r : r.url;
 
+  const shown = [];
+  const badges = [];
+  const opened = [];
   const self_ = {
     location: { origin: ORIGIN },
     addEventListener: (type, fn) => { listeners[type] = fn; },
     skipWaiting: async () => {},
-    clients: { claim: async () => {} },
+    registration: {
+      showNotification: async (title, opts) => { shown.push({ title, ...opts }); },
+      setAppBadge: async n => { badges.push(n); },
+      clearAppBadge: async () => { badges.push(0); }
+    },
+    clients: {
+      claim: async () => {},
+      matchAll: async () => opened.slice(),
+      openWindow: async url => { opened.push({ url, openedFresh: true }); }
+    },
     caches: undefined
   };
   const caches_ = {
@@ -54,8 +66,13 @@ function load() {
   const fetch_ = async req => {
     fetched.push(key(req));
     if (offline.on) throw new Error('offline');
-    return { ok: true, clone: () => ({ body: 'fresh' }), body: 'fresh' };
+    return {
+      ok: true, status: 200,
+      clone: () => ({ body: 'fresh' }), body: 'fresh',
+      json: async () => bulletin.value
+    };
   };
+  const bulletin = { value: { announcements: [] } };
   const offline = { on: false };
 
   new Function('self', 'caches', 'fetch', 'Request', 'URL', src)(
@@ -63,7 +80,7 @@ function load() {
       constructor(url, init) { this.url = String(url); Object.assign(this, init); }
     }, URL);
 
-  return { listeners, puts, fetched, offline, store };
+  return { listeners, puts, fetched, offline, store, shown, badges, opened, cache, bulletin };
 }
 
 /* Ask the worker what it does with one request. `handled` is the whole
@@ -149,5 +166,65 @@ let act;
 await sw.listeners.activate({ waitUntil: p => { act = p; } });
 await act;
 
-console.log('PASS  the worker caches the shell and opens offline, and refuses every ' +
-  'request carrying member data (' + PRIVATE.length + ' checked, plus both Apps Script hosts)');
+/* --- BEING PUSHED ---
+   The push itself is empty. The worker fetches the board and reads it
+   here, so what Apple and Google carry is a knock and never a notice. */
+const p = load();
+const push = async () => {
+  let done;
+  await p.listeners.push({ waitUntil: q => { done = q; } });
+  await done;
+};
+
+p.bulletin.value = { announcements: [
+  { announcementId: 'ANN1', title: 'Stated meeting moved', message: 'To the 14th.', expiryDate: '' },
+  { announcementId: 'ANN2', title: 'Past Masters Night', message: 'All welcome.', expiryDate: '' }
+] };
+await push();
+assert.strictEqual(p.shown.length, 1, 'exactly one notification per push');
+assert.match(p.shown[0].body, /2 new notices/, 'two unread are summarised, not stacked');
+assert.strictEqual(p.badges.at(-1), 2, 'and counted on the icon');
+assert.strictEqual(p.shown[0].data.url, '/?tab=bulletin', 'tapping it opens the board');
+
+/* One unread shows the notice itself. */
+const one = load();
+one.bulletin.value = { announcements: [
+  { announcementId: 'ANN9', title: 'Emergent communication', message: 'Tuesday, 6pm.', expiryDate: '' }
+] };
+let w; await one.listeners.push({ waitUntil: q => { w = q; } }); await w;
+assert.strictEqual(one.shown[0].title, 'Emergent communication');
+assert.match(one.shown[0].body, /Tuesday/);
+
+/* An expired notice is off the board, so it is not news. */
+const old = load();
+old.bulletin.value = { announcements: [
+  { announcementId: 'OLD', title: 'Last year', message: 'x', expiryDate: '2000-01-01' }
+] };
+let x; await old.listeners.push({ waitUntil: q => { x = q; } }); await x;
+assert.strictEqual(old.badges.at(-1), 0, 'nothing current means no number on the icon');
+
+/* THE RULE EVERY BROWSER ENFORCES: a push that shows nothing is a silent
+   push, and a handful of those costs the site its permission outright.
+   So a failed fetch must still show something. */
+const dark = load();
+dark.offline.on = true;
+let y; await dark.listeners.push({ waitUntil: q => { y = q; } }); await y;
+assert.strictEqual(dark.shown.length, 1,
+  'a push must ALWAYS end in a visible notification, even when the board cannot be read');
+assert.ok(dark.shown[0].title && dark.shown[0].body, 'and it must say something');
+
+/* --- tapping it --- */
+const tap = load();
+let z, closed = false;
+await tap.listeners.notificationclick({
+  notification: { close: () => { closed = true; }, data: { url: '/?tab=bulletin' } },
+  waitUntil: q => { z = q; }
+});
+await z;
+assert.ok(closed, 'the notification is dismissed when it is tapped');
+assert.strictEqual(tap.opened.length, 1, 'and the app is opened');
+assert.strictEqual(tap.opened[0].url, '/?tab=bulletin');
+
+console.log('PASS  the worker caches the shell and opens offline, refuses every ' +
+  'request carrying member data (' + PRIVATE.length + ' checked, plus both Apps Script hosts), ' +
+  'and always shows a notification for a push it cannot read');

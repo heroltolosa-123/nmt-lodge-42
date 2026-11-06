@@ -1,5 +1,6 @@
 import { ROLES, json, readSession } from './_lib.mjs';
 import { kvConfigured } from './_kv.mjs';
+import { pushConfigured } from './_push.mjs';
 
 /* ---------------------------------------------------------------------
    Configuration check.
@@ -65,6 +66,16 @@ export default async function handler(req, res) {
     // Whether officers can set their own passwords yet. Without it every
     // chair falls back to its environment variable, which still works.
     passwordStore: { set: kvConfigured() },
+    /* Notifying the brethren needs both halves: a signing key to prove the
+       push came from this Lodge, and the store to remember who agreed to
+       be told. Either one missing and the button says so rather than
+       failing quietly — which is the whole reason it is reported here. */
+    push: {
+      keys: pushConfigured(),
+      store: kvConfigured(),
+      subject: !!process.env.VAPID_SUBJECT,
+      ready: pushConfigured() && kvConfigured()
+    },
     email: describeEmail(),
     chairs: {}
   };
